@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240">
+  <defs>
+    <g id="r" fill="none" stroke="#dd6aa1" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <!-- botón de la rosa (espiral) -->
+      <path d="M0 3 a3 3 0 1 1 -3 -3 a7 7 0 1 1 7 7 a11 11 0 1 1 -11 -11"/>
+      <!-- pétalos exteriores -->
+      <path d="M-12 -2 q -3 -13 9 -15 q 13 -2 14 12 q 1 13 -13 13 q -12 0 -14 -9"/>
+      <!-- tallo -->
+      <path d="M0 13 q 1 10 0 22"/>
+      <!-- hoja -->
+      <path d="M0 24 q 9 -2 12 -10 q -10 0 -12 10"/>
+    </g>
+  </defs>
+  <use href="#r" transform="translate(66 72) rotate(-6) scale(1.15)" opacity="0.4"/>
+  <use href="#r" transform="translate(180 178) rotate(9) scale(1.35)" opacity="0.4"/>
+</svg>

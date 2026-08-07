@@ -1,0 +1,1073 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Manual de uso — KALLOS</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --paper: #fffbf5;
+    --paper-alt: #f5ebce;
+    --ink: #201a10;
+    --ink-soft: #5c5240;
+    --neutral: #8c8170;
+    --hairline: #e8dcc0;
+    --brand-50: #fbf7ec;
+    --brand-100: #f5ebce;
+    --brand-200: #ead9a0;
+    --brand-500: #d4af37;
+    --brand-600: #b8912b;
+    --brand-700: #8f6f1f;
+    --brand-900: #47370e;
+    --fill-a: #b8912b;
+    --fill-b: #47370e;
+    --good: #047857;
+    --good-bg: #ecfdf5;
+    --good-bd: #a7f3d0;
+    --warn: #b45309;
+    --warn-bg: #fffbeb;
+    --warn-bd: #fde68a;
+    --bad: #b91c1c;
+    --bad-bg: #fef2f2;
+    --bad-bd: #fecaca;
+    --info: #1d4ed8;
+    --info-bg: #eff6ff;
+    --info-bd: #bfdbfe;
+    --purple: #6d28d9;
+    --purple-bg: #f5f3ff;
+    --purple-bd: #ddd6fe;
+    --shadow: 0 1px 2px rgba(107,83,22,.10), 0 10px 24px -14px rgba(107,83,22,.30);
+    --sidebar-w: 248px;
+  }
+
+  :root[data-theme="dark"] {
+    --paper: #17151a;
+    --paper-alt: #201c14;
+    --ink: #f5ecd8;
+    --ink-soft: #cbb98f;
+    --neutral: #a89a78;
+    --hairline: #3a3020;
+    --brand-50: #241d10;
+    --brand-100: #332911;
+    --brand-200: #46370f;
+    --brand-500: #e8c766;
+    --brand-600: #f0d791;
+    --brand-700: #f6e6ba;
+    --brand-900: #fbf7ec;
+    --good: #6fce9c; --good-bg: #123024; --good-bd: #1f5c43;
+    --warn: #e0af5f; --warn-bg: #332510; --warn-bd: #63481f;
+    --bad: #e58585; --bad-bg: #331b1b; --bad-bd: #5c2b2b;
+    --info: #93c5fd; --info-bg: #131f33; --info-bd: #24406b;
+    --purple: #c4b5fd; --purple-bg: #211a35; --purple-bd: #3c2f5c;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 10px 24px -14px rgba(0,0,0,.6);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #17151a; --paper-alt: #201c14; --ink: #f5ecd8; --ink-soft: #cbb98f; --neutral: #a89a78;
+      --hairline: #3a3020; --brand-50: #241d10; --brand-100: #332911; --brand-200: #46370f;
+      --brand-500: #e8c766; --brand-600: #f0d791; --brand-700: #f6e6ba; --brand-900: #fbf7ec;
+      --good: #6fce9c; --good-bg: #123024; --good-bd: #1f5c43;
+      --warn: #e0af5f; --warn-bg: #332510; --warn-bd: #63481f;
+      --bad: #e58585; --bad-bg: #331b1b; --bad-bd: #5c2b2b;
+      --info: #93c5fd; --info-bg: #131f33; --info-bd: #24406b;
+      --purple: #c4b5fd; --purple-bg: #211a35; --purple-bd: #3c2f5c;
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 10px 24px -14px rgba(0,0,0,.6);
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3, h4 {
+    font-family: Cambria, Georgia, "Iowan Old Style", "Times New Roman", serif;
+    text-wrap: balance;
+    font-weight: 600;
+    color: var(--brand-900);
+    margin: 0;
+  }
+  :root[data-theme="dark"] h1, :root[data-theme="dark"] h2, :root[data-theme="dark"] h3, :root[data-theme="dark"] h4 { color: var(--ink); }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) h1, :root:not([data-theme="light"]) h2,
+    :root:not([data-theme="light"]) h3, :root:not([data-theme="light"]) h4 { color: var(--ink); }
+  }
+  a { color: var(--brand-600); }
+  code { font-family: ui-monospace, "Cascadia Code", Consolas, monospace; }
+
+  /* ---------- layout ---------- */
+  .shell { display: flex; max-width: 1180px; margin: 0 auto; }
+  .sidebar {
+    width: var(--sidebar-w);
+    flex-shrink: 0;
+    position: sticky;
+    top: 0;
+    align-self: flex-start;
+    height: 100vh;
+    overflow-y: auto;
+    padding: 22px 14px 40px;
+    border-right: 1px solid var(--hairline);
+  }
+  .sidebar .brand {
+    font-family: Cambria, Georgia, serif;
+    font-weight: 700;
+    color: var(--brand-700);
+    font-size: 15px;
+    padding: 0 8px 14px;
+    line-height: 1.3;
+  }
+  .sidebar .brand span { display: block; font-size: 10.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--neutral); font-weight: 600; margin-top: 2px; }
+  .sidebar nav { display: flex; flex-direction: column; gap: 1px; }
+  .sidebar .grp-label {
+    font-size: 10.5px; text-transform: uppercase; letter-spacing: .07em; font-weight: 700;
+    color: var(--neutral); padding: 14px 8px 4px;
+  }
+  .sidebar a.nav-link {
+    display: block; font-size: 13px; padding: 6px 8px; border-radius: 8px; color: var(--ink-soft); text-decoration: none;
+  }
+  .sidebar a.nav-link:hover { background: var(--paper-alt); color: var(--brand-700); }
+
+  .content { flex: 1; min-width: 0; padding: 28px 32px 80px; }
+  @media (max-width: 860px) {
+    .sidebar { display: none; }
+    .content { padding: 20px 16px 60px; }
+  }
+
+  /* ---------- hero ---------- */
+  .hero {
+    background: #0b0b0d;
+    border: 1px solid rgba(212,175,55,.4);
+    border-radius: 20px;
+    padding: 28px 26px 24px;
+    color: #f5ecd8;
+    margin-bottom: 8px;
+    display: flex;
+    gap: 22px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .hero .hero-logo { width: 104px; height: 104px; object-fit: contain; flex-shrink: 0; }
+  .hero .hero-texto { flex: 1; min-width: 240px; }
+  .hero .eyebrow { text-transform: uppercase; letter-spacing: .12em; font-size: 11px; color: #d4af37; font-weight: 700; margin-bottom: 8px; }
+  .hero h1 { color: #f5ecd8; font-size: clamp(22px, 3vw, 30px); line-height: 1.2; max-width: 26ch; }
+  .hero p { max-width: 60ch; color: #cbb98f; font-size: 14.5px; margin: 12px 0 0; }
+
+  .role-band { display: flex; gap: 8px; flex-wrap: wrap; margin: 16px 0 28px; }
+  .role-chip { font-size: 12px; font-weight: 700; padding: 5px 11px; border-radius: 999px; }
+  .role-chip.superadmin { background: var(--brand-100); color: var(--brand-700); }
+  .role-chip.admin { background: var(--info-bg); color: var(--info); }
+  .role-chip.personal { background: var(--good-bg); color: var(--good); }
+  .role-chip.cliente { background: var(--warn-bg); color: var(--warn); }
+
+  /* ---------- role section headers ---------- */
+  .role-section { margin: 56px 0 8px; padding-top: 8px; border-top: 3px solid var(--hairline); }
+  .role-section h2 { font-size: 24px; display: flex; align-items: center; gap: 10px; }
+  .role-section .role-tag { font-size: 12px; padding: 3px 10px; border-radius: 999px; font-weight: 700; font-family: system-ui, sans-serif; }
+  .role-section p.role-intro { color: var(--ink-soft); font-size: 14.5px; max-width: 68ch; margin-top: 8px; }
+
+  .tag-superadmin { background: var(--brand-100); color: var(--brand-700); }
+  .tag-admin { background: var(--info-bg); color: var(--info); }
+  .tag-personal { background: var(--good-bg); color: var(--good); }
+  .tag-cliente { background: var(--warn-bg); color: var(--warn); }
+
+  /* ---------- page block (spec card) ---------- */
+  .page-block { margin: 30px 0; scroll-margin-top: 14px; }
+  .page-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .page-head h3 { font-size: 18px; }
+  .route { font-size: 11.5px; background: var(--paper-alt); border: 1px solid var(--hairline); color: var(--brand-700); padding: 2px 8px; border-radius: 6px; font-family: ui-monospace, monospace; }
+  .lede { color: var(--ink-soft); font-size: 14px; margin: 6px 0 14px; max-width: 72ch; }
+
+  table.field-table { border-collapse: collapse; width: 100%; font-size: 13.3px; margin-bottom: 12px; }
+  table.field-table th {
+    text-align: left; padding: 7px 10px; background: var(--paper-alt); border-bottom: 1px solid var(--hairline);
+    font-weight: 700; color: var(--ink-soft); font-size: 11.5px; text-transform: uppercase; letter-spacing: .04em;
+  }
+  table.field-table td { padding: 8px 10px; border-bottom: 1px solid var(--hairline); vertical-align: top; }
+  table.field-table td:first-child { font-weight: 600; white-space: nowrap; color: var(--brand-700); }
+  table.field-table tr:last-child td { border-bottom: none; }
+  .table-wrap { overflow-x: auto; border: 1px solid var(--hairline); border-radius: 12px; margin-bottom: 12px; max-width: 100%; }
+  .table-wrap table { margin-bottom: 0; }
+
+  .actions-line { font-size: 13.3px; color: var(--ink-soft); margin: 0 0 10px; }
+  .actions-line b { color: var(--ink); }
+
+  .callout { border-radius: 12px; padding: 10px 14px; font-size: 13px; margin: 10px 0; border: 1px solid; }
+  .callout.warn { background: var(--warn-bg); border-color: var(--warn-bd); color: var(--warn); }
+  .callout.good { background: var(--good-bg); border-color: var(--good-bd); color: var(--good); }
+  .callout.info { background: var(--info-bg); border-color: var(--info-bd); color: var(--info); }
+  .callout.purple { background: var(--purple-bg); border-color: var(--purple-bd); color: var(--purple); }
+  .callout b { font-weight: 700; }
+
+  .filtro-banner {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    background: var(--brand-100); border: 1px solid var(--brand-200); color: var(--brand-700);
+    border-radius: 12px; padding: 10px 14px; font-size: 13.5px; font-weight: 600; margin: 0 0 28px;
+  }
+  .filtro-banner a { color: var(--brand-700); text-decoration: underline; font-weight: 700; }
+
+  /* ---------- recreated UI mockups ("recortes") ---------- */
+  .mock { background: var(--paper); border: 1px solid var(--hairline); border-radius: 16px; box-shadow: var(--shadow); overflow: hidden; margin: 14px 0 16px; max-width: 480px; }
+  .mock-bar { background: var(--paper-alt); border-bottom: 1px solid var(--hairline); padding: 7px 12px; font-size: 11px; color: var(--neutral); font-family: ui-monospace, monospace; }
+  .mock-body { padding: 14px; font-size: 12.5px; }
+  .mock-body h4 { font-size: 14px; margin-bottom: 8px; }
+  .mock-card { background: var(--paper); border: 1px solid var(--hairline); border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; box-shadow: 0 1px 2px rgba(0,0,0,.04); }
+  .mock-label { display: block; font-size: 11px; font-weight: 600; margin-bottom: 3px; color: var(--ink-soft); }
+  .mock-input, .mock-select {
+    width: 100%; border: 1px solid var(--hairline); border-radius: 8px; padding: 6px 9px; font-size: 12px;
+    background: var(--paper); color: var(--ink); margin-bottom: 7px;
+  }
+  .mock-row { display: flex; gap: 8px; }
+  .mock-row > div { flex: 1; }
+  .mock-btn {
+    display: inline-block; background: var(--fill-a); color: #fff !important; text-decoration: none;
+    border-radius: 8px; padding: 7px 12px; font-size: 12.5px; font-weight: 700; text-align: center; border: none;
+  }
+  .mock-btn.outline { background: transparent; border: 1px solid var(--brand-200); color: var(--brand-700) !important; }
+  .mock-btn.full { display: block; width: 100%; }
+  .mock-pill { display: inline-block; font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
+  .mock-pill.pendiente { background: var(--warn-bg); color: var(--warn); }
+  .mock-pill.confirmada { background: var(--info-bg); color: var(--info); }
+  .mock-pill.completada { background: var(--good-bg); color: var(--good); }
+  .mock-pill.cancelada { background: var(--hairline); color: var(--neutral); }
+  .mock-pill.reprogramada { background: var(--purple-bg); color: var(--purple); }
+  .mock-line { display: flex; justify-content: space-between; font-size: 12.3px; padding: 3px 0; }
+  .mock-hr { border: none; border-top: 1px dashed var(--hairline); margin: 6px 0; }
+  .mock-total { display: flex; justify-content: space-between; font-weight: 700; padding-top: 5px; border-top: 1px solid var(--hairline); }
+  .mock-nav { display: flex; gap: 4px; flex-wrap: wrap; background: var(--brand-50); padding: 8px 10px; border-bottom: 1px solid var(--hairline); }
+  .mock-nav span { font-size: 10.5px; padding: 3px 7px; border-radius: 6px; color: var(--ink-soft); }
+  .mock-nav span.active { background: var(--brand-100); color: var(--brand-700); font-weight: 700; }
+  .mock-stat { background: var(--paper-alt); border-radius: 10px; padding: 8px 10px; text-align: center; }
+  .mock-stat .l { font-size: 9.5px; text-transform: uppercase; color: var(--neutral); font-weight: 700; }
+  .mock-stat .v { font-family: Cambria, Georgia, serif; font-size: 15px; color: var(--brand-700); margin-top: 2px; }
+  .mock-grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .mock-grid2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+
+  /* ---------- glossary / tables ---------- */
+  .glossary dt { font-weight: 700; color: var(--brand-700); margin-top: 12px; }
+  .glossary dd { margin: 2px 0 0; color: var(--ink-soft); font-size: 13.5px; }
+
+  footer.doc-footer { border-top: 1px solid var(--hairline); margin-top: 50px; padding-top: 18px; font-size: 12px; color: var(--neutral); }
+
+  @media (max-width: 640px) {
+    .mock { max-width: 100%; }
+  }
+
+  /* ---------- print / PDF ---------- */
+  @page { margin: 15mm 13mm; }
+  @media print {
+    :root, :root:not([data-theme="light"]) {
+      --paper: #fffbf5; --paper-alt: #f5ebce; --ink: #201a10; --ink-soft: #5c5240; --neutral: #8c8170; --hairline: #e8dcc0;
+      --brand-50: #fbf7ec; --brand-100: #f5ebce; --brand-200: #ead9a0; --brand-500: #d4af37; --brand-600: #b8912b; --brand-700: #8f6f1f; --brand-900: #47370e;
+      --good: #047857; --good-bg: #ecfdf5; --good-bd: #a7f3d0;
+      --warn: #b45309; --warn-bg: #fffbeb; --warn-bd: #fde68a;
+      --bad: #b91c1c; --bad-bg: #fef2f2; --bad-bd: #fecaca;
+      --info: #1d4ed8; --info-bg: #eff6ff; --info-bd: #bfdbfe;
+      --purple: #6d28d9; --purple-bg: #f5f3ff; --purple-bd: #ddd6fe;
+    }
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+    body { background: var(--paper); }
+    .sidebar { display: none; }
+    .shell { display: block; max-width: 100%; }
+    .content { padding: 0 6px; }
+    a { text-decoration: none; }
+    a.nav-link { display: none; }
+    .hero { break-inside: avoid; }
+    .role-section { break-before: page; border-top: none; padding-top: 0; margin-top: 0; }
+    #inicio ~ .page-block:first-of-type, .hero + .role-band + .page-block { break-before: avoid; }
+    .page-block { break-inside: avoid; }
+    .mock, table.field-table, .table-wrap { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand"><img src="/logo.png" alt="KALLOS" style="width:56px;height:56px;object-fit:contain;display:block;margin-bottom:6px;">KALLOS<span>The order behind the beauty</span><span>Manual de uso del sistema</span></div>
+    <nav>
+      <a class="nav-link" href="#inicio">Cómo entrar</a>
+      <a class="nav-link" href="#flujo-dinero">El flujo del dinero</a>
+
+      <div data-role="superadmin">
+        <div class="grp-label">Super Admin (dueña)</div>
+        <a class="nav-link" href="#sa-panel">Panel</a>
+        <a class="nav-link" href="#sa-cobros">Cobros</a>
+        <a class="nav-link" href="#sa-cierre">Cierre de caja</a>
+        <a class="nav-link" href="#sa-citas">Citas</a>
+        <a class="nav-link" href="#sa-ventas">Ventas</a>
+        <a class="nav-link" href="#sa-asistencia">Asistencia</a>
+        <a class="nav-link" href="#sa-permisos">Permisos</a>
+        <a class="nav-link" href="#sa-contabilidad">Contabilidad</a>
+        <a class="nav-link" href="#sa-prestamos">Préstamos</a>
+        <a class="nav-link" href="#sa-inventario">Inventario</a>
+        <a class="nav-link" href="#sa-historial">Historial</a>
+        <a class="nav-link" href="#sa-auditoria">Auditoría</a>
+        <a class="nav-link" href="#sa-usuarios">Usuarios</a>
+        <a class="nav-link" href="#sa-servicios">Servicios</a>
+      </div>
+
+      <div data-role="admin">
+        <div class="grp-label">Admin</div>
+        <a class="nav-link" href="#ad-resumen">Qué ve el Admin</a>
+        <a class="nav-link" href="#ad-reportes">Reportes</a>
+      </div>
+
+      <div data-role="personal">
+        <div class="grp-label">Personal (profesional)</div>
+        <a class="nav-link" href="#pe-jornada">Mi jornada</a>
+        <a class="nav-link" href="#pe-registro">Registrar trabajo</a>
+        <a class="nav-link" href="#pe-permisos">Permisos</a>
+        <a class="nav-link" href="#pe-perfil">Mi perfil</a>
+      </div>
+
+      <div data-role="cliente">
+        <div class="grp-label">Clienta</div>
+        <a class="nav-link" href="#cl-registro">Crear cuenta</a>
+        <a class="nav-link" href="#cl-portal">Portal / Solicitar cita</a>
+      </div>
+
+      <div class="grp-label">Referencia</div>
+      <a class="nav-link" href="#glosario">Glosario</a>
+      <a class="nav-link" href="#accesos">Tabla de accesos</a>
+    </nav>
+  </aside>
+
+  <main class="content">
+
+    <div class="hero" id="inicio">
+      <img class="hero-logo" src="/logo.png" alt="KALLOS">
+      <div class="hero-texto">
+        <p class="eyebrow">KALLOS · The order behind the beauty</p>
+        <h1>Manual de uso del sistema, pantalla por pantalla</h1>
+        <p>
+          Cómo entrar, qué ve cada perfil y para qué sirve cada campo y cada botón. Cada pantalla real de la
+          app fue recorrida para escribir este manual, así que las palabras y los colores de aquí son los mismos que
+          vas a ver al usarlo.
+        </p>
+      </div>
+    </div>
+
+    <div class="role-band" id="role-band-full">
+      <span class="role-chip superadmin">Super Admin — la dueña</span>
+      <span class="role-chip admin">Admin — quien administra el día a día</span>
+      <span class="role-chip personal">Personal — manicuristas / estilistas / lashistas</span>
+      <span class="role-chip cliente">Clienta — quien agenda su cita</span>
+    </div>
+    <div id="filtro-rol-banner"></div>
+
+    <div class="page-block">
+      <div class="page-head"><h3>Cómo entrar</h3> <code class="route">/login</code></div>
+      <p class="lede">
+        Todos los perfiles entran por la misma pantalla. El sistema pregunta un <b>usuario o correo</b> y una
+        <b>contraseña</b>; según el rol de esa cuenta, te manda automáticamente a la pantalla que te corresponde
+        (el personal a "Mi jornada", el admin a "Cobros", la dueña al "Panel", y la clienta a su Portal).
+      </p>
+      <div class="mock">
+        <div class="mock-bar">app.kallos.app/login</div>
+        <div class="mock-body" style="max-width:280px;margin:0 auto;">
+          <label class="mock-label">Usuario o correo</label>
+          <div class="mock-input">superadmin</div>
+          <label class="mock-label">Contraseña</label>
+          <div class="mock-input">••••••••</div>
+          <a class="mock-btn full">Ingresar</a>
+          <p style="text-align:center;font-size:11px;color:var(--neutral);margin-top:8px;">¿Eres clienta? <span style="color:var(--brand-600);font-weight:600;">Crea tu cuenta</span></p>
+        </div>
+      </div>
+      <div class="table-wrap"><table class="field-table">
+        <thead><tr><th>Campo</th><th>Para qué sirve</th></tr></thead>
+        <tbody>
+          <tr><td>Usuario o correo</td><td>Si el personal/dueña entra con un nombre corto (ej. <code>norma</code>), el sistema lo completa por dentro como <code>norma@cuentas.kallos.app</code>. Las clientas que se registraron con cédula entran con su número de cédula.</td></tr>
+          <tr><td>Contraseña</td><td>La que le asignaron al crear la cuenta (o su cédula, si es clienta registrada por sí misma).</td></tr>
+          <tr><td>"Crea tu cuenta"</td><td>Enlace solo para clientas nuevas — lleva al registro con cédula (ver sección Clienta).</td></tr>
+        </tbody>
+      </table></div>
+      <div class="callout warn"><b>Si el usuario o la contraseña no funcionan</b>, cualquier cuenta puede recuperarlos pidiéndoselo a la dueña — ella se los cambia desde Usuarios → "Usuario / contraseña" sin necesitar el correo antiguo.</div>
+    </div>
+
+    <div class="page-block" id="flujo-dinero">
+      <div class="page-head"><h3>El flujo del dinero, de un vistazo</h3></div>
+      <p class="lede">Antes de entrar pantalla por pantalla, esta es la idea completa que conecta casi todas ellas: <b>la profesional nunca recibe ni cobra dinero.</b></p>
+      <div class="table-wrap"><table class="field-table">
+        <thead><tr><th>Paso</th><th>Qué pasa</th></tr></thead>
+        <tbody>
+          <tr><td>1. Se agenda</td><td>Por el Portal (la clienta) o por Citas (admin/dueña). Si hay abono, se pide monto + medio de pago + foto del comprobante.</td></tr>
+          <tr><td>2. Se atiende</td><td>La profesional registra el trabajo en "Registrar trabajo" con foto del resultado — pero no cobra nada ahí.</td></tr>
+          <tr><td>3. Queda por cobrar</td><td>El saldo (total del servicio menos el abono) aparece en "Cobros" para que el admin o la dueña lo cobre.</td></tr>
+          <tr><td>4. Se cobra</td><td>El admin/dueña registra el pago en Cobros (uno o varios medios en el mismo cobro).</td></tr>
+          <tr><td>5. Se cuadra el día</td><td>Al cerrar, "Cierre de caja" resume cuánto entró por cada medio de pago.</td></tr>
+          <tr><td>6. Se paga a la profesional</td><td>Contabilidad/Reportes calcula el 50% de comisión sobre lo trabajado, descontando lo que deba de préstamos.</td></tr>
+        </tbody>
+      </table></div>
+      <div class="callout info">Este circuito es la razón por la que existen pantallas separadas para "registrar el trabajo" y para "cobrar": nunca es la misma persona quien hace las dos cosas.</div>
+    </div>
+
+    <!-- ======================= SUPERADMIN ======================= -->
+    <div class="role-section" id="superadmin" data-role="superadmin">
+      <h2>Super Admin (la dueña) <span class="role-tag tag-superadmin">acceso total</span></h2>
+      <p class="role-intro">Ve y controla todo: dinero, inventario, precios, usuarios y el registro de auditoría. Es el único rol que puede cambiar el usuario/contraseña de otra persona, borrar el acceso de alguien, o ver quién hizo qué en el sistema.</p>
+    </div>
+
+    <div class="page-block" id="sa-panel" data-role="superadmin">
+      <div class="page-head"><h3>Panel</h3> <code class="route">/dashboard</code></div>
+      <p class="lede">La primera pantalla al entrar: el resumen de lo trabajado en el día elegido.</p>
+      <div class="mock">
+        <div class="mock-bar">/dashboard</div>
+        <div class="mock-body">
+          <div class="mock-card">
+            <span class="mock-label">Total registrado (sin anulados)</span>
+            <div style="font-family:Cambria,serif;font-size:20px;color:var(--brand-700);">$285.000</div>
+            <div style="font-size:11px;color:var(--neutral);">4 trabajos registrados</div>
+          </div>
+          <div class="mock-card">
+            <h4>Por empleada</h4>
+            <div class="mock-line"><span>Norma Gabriela (2)</span><b>$150.000</b></div>
+            <div class="mock-line"><span>Xiomara (2)</span><b>$135.000</b></div>
+          </div>
+        </div>
+      </div>
+      <div class="table-wrap"><table class="field-table">
+        <thead><tr><th>Campo</th><th>Para qué sirve</th></tr></thead>
+        <tbody>
+          <tr><td>Selector de fecha</td><td>Cambia el día que se está mirando; por defecto es hoy.</td></tr>
+          <tr><td>Total registrado</td><td>Suma de todos los <code>precio_cobrado</code> de trabajos NO anulados de ese día.</td></tr>
+          <tr><td>Por empleada</td><td>Cuánto trabajó (en pesos y en cantidad de servicios) cada profesional ese día, de mayor a menor.</td></tr>
+          <tr><td>Detalle de registros</td><td>Lista de cada trabajo del día: quién, qué servicio, descuento aplicado si lo hubo, y si fue anulado.</td></tr>
+        </tbody>
+      </table></div>
+      <div class="callout warn">Si lo que se registró como trabajo no coincide con lo reportado en el cierre de caja de ese día, aparece arriba un aviso ⚠ con la diferencia exacta en pesos — para detectar errores rápido.</div>
+    </div>
+
+    <div class="page-block" id="sa-cobros" data-role="superadmin">
+      <div class="page-head"><h3>Cobros</h3> <code class="route">/cobros</code> <span style="font-size:11px;color:var(--neutral);">— también la ve Admin</span></div>
+      <p class="lede">La cuenta por cobrar de cada visita, presentada como un recibo. Es la pantalla donde entra el dinero de los servicios.</p>
+      <div class="mock">
+        <div class="mock-bar">/cobros</div>
+        <div class="mock-body">
+          <div class="mock-card">
+            <div style="display:flex;justify-content:space-between;">
+              <div><b>María Pérez</b><div style="font-size:11px;color:var(--neutral);">2:30 pm · atendió Norma Gabriela</div></div>
+              <span style="color:var(--warn);font-weight:700;font-size:12.5px;">Debe $70.000</span>
+            </div>
+            <hr class="mock-hr">
+            <div class="mock-line"><span>Manicure Semipermanente</span><span>$50.000</span></div>
+            <div class="mock-line"><span>Cejas Cera</span><span>$12.000</span></div>
+            <div class="mock-line" style="color:var(--neutral);"><span>Subtotal</span><span>$62.000</span></div>
+            <div class="mock-line" style="color:var(--neutral);"><span>Abono</span><span>-$20.000</span></div>
+            <div class="mock-total"><span>TOTAL</span><span style="color:var(--warn);">$42.000</span></div>
+            <a class="mock-btn full" style="margin-top:8px;">Cobrar</a>
+          </div>
+        </div>
+      </div>
+      <div class="table-wrap"><table class="field-table">
+        <thead><tr><th>Campo</th><th>Para qué sirve</th></tr></thead>
+        <tbody>
+          <tr><td>Selector de fecha</td><td>Ve las visitas atendidas ese día (agrupadas por "visita": todos los servicios de una misma clienta en una misma atención cuentan como una sola cuenta).</td></tr>
+          <tr><td>Recibo por visita</td><td>Cada servicio con su precio, Subtotal, Abono ya pagado (si vino de una cita), Cobrado (si ya se abonó parte), y el TOTAL pendiente en negrita.</td></tr>
+          <tr><td>Botón "Cobrar"</td><td>Abre el formulario para registrar el pago de esa visita.</td></tr>
+          <tr><td>Monto + Medio de pago</td><td>Cuánto se paga y con qué medio (Efectivo, Nequi, Daviplata, Datáfono).</td></tr>
+          <tr><td>"+ Agregar este medio y sumar otro"</td><td>Permite dividir un mismo cobro en varios medios (ej. mitad efectivo, mitad Nequi): agrega esa línea y deja escribir la siguiente, mostrando cuánto llevas sumado del total pendiente.</td></tr>
+          <tr><td>Foto del pago</td><td>Obligatoria si el medio no es efectivo (comprobante de Nequi/Daviplata/Datáfono); opcional si es efectivo. Se puede tomar en el momento o elegir una ya guardada en el celular.</td></tr>
+          <tr><td>Nota</td><td>Comentario libre sobre ese cobro.</td></tr>
+          <tr><td>"Registrar cobro"</td><td>Guarda todas las líneas de pago agregadas de una vez. Puede ser un pago parcial: lo que falte sigue apareciendo como pendiente.</td></tr>
+        </tbody>
+      </table></div>
+      <div class="callout good">Cuando ya no debe nada, la visita pasa a la lista "Ya cobradas" con una etiqueta verde, y se puede ver la foto de cada pago con "ver foto".</div>
+    </div>
+
+    <div class="page-block" id="sa-cierre" data-role="superadmin">
+      <div class="page-head"><h3>Cierre de caja</h3> <code class="route">/cierre-caja</code> <span style="font-size:11px;color:var(--neutral);">— también la ve Admin</span></div>
+      <p class="lede">Se ve distinto según el rol: <b>Admin</b> llena el formulario al final del día; <b>Super Admin</b> solo lo revisa (no lo llena).</p>
+      <div class="mock-grid2" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;max-width:640px;">
+        <div class="mock">
+          <div class="mock-bar">vista Admin — llena el cierre</div>
+          <div class="mock-body">
+            <label class="mock-label">Base (efectivo inicial)</label>
+            <div class="mock-input">$50.000</div>
+            <div class="mock-row"><div><label class="mock-label">Efectivo</label><div class="mock-input">$120.000</div></div><div><label class="mock-label">Nequi</label><div class="mock-input">$80.000</div></div></div>
+            <div class="mock-row"><div><label class="mock-label">Daviplata</label><div class="mock-input">$0</div></div><div><label class="mock-label">Datáfono</label><div class="mock-input">$40.000</div></div></div>
+            <a class="mock-btn full">Guardar cierre de caja</a>
+          </div>
+        </div>
+        <div class="mock">
+          <div class="mock-bar">vista Super Admin — solo lectura</div>
+          <div class="mock-body">
+            <div class="mock-card" style="text-align:center;">
+              <p style="font-size:11px;color:var(--neutral);margin:0 0 6px;">Cerrado por Administracion</p>
+              <div class="mock-grid3">
+                <div class="mock-stat"><div class="l">Base</div><div class="v">$50k</div></div>
+                <div class="mock-stat" style="background:var(--good-bg);"><div class="l" style="color:var(--good);">Entrado</div><div class="v" style="color:var(--good);">$240k</div></div>
+                <div class="mock-stat" style="background:var(--bad-bg);"><div class="l" style="color:var(--bad);">Salido</div><div class="v" style="color:var(--bad);">$30k</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="table-wrap"><table class="field-table">
+        <thead><tr><th>Campo</th><th>Para qué sirve</th></tr></thead>
+        <tbody>
+          <tr><td>Base (efectivo inicial)</td><td>Con cuánto efectivo se abrió la caja ese día.</td></tr>
+          <tr><td>Efectivo / Nequi / Daviplata / Datáfono</td><td>Lo que hay al cerrar en cada medio; Efectivo es obligatorio, los demás quedan en 0 si no aplican.</td></tr>
+          <tr><td>Pago a proveedores</td><td>Opcional: monto, medio de pago y nota de a quién/por qué se le pagó a un proveedor ese día (sale de la caja).</td></tr>
+          <tr><td>Observaciones</td><td>Cualquier nota libre sobre el cierre.</td></tr>
+          <tr><td>Trabajos completados del día</td><td>Lista de referencia, no editable: todo lo que se registró como trabajo hecho ese día.</td></tr>
+          <tr><td>Cobrado del día por medio</td><td>Cuánto se cobró (Cobros + abonos de citas) en cada medio de pago, para comparar contra lo que se está reportando.</td></tr>
+          <tr><td>Préstamos del día</td><td>Lo prestado hoy (sale de caja) y lo que devolvieron hoy (entra a caja), separado por medio de pago.</td></tr>
+          <tr><td>"Prestado pendiente"</td><td>Aviso persistente (no depende de la fecha) con el total que aún deben las profesionales en préstamos/fiados.</td></tr>
+        </tbody>
+      </table></div>
+      <div class="callout warn">Un cierre <b>no se puede editar ni borrar</b> una vez guardado. Si hubo un error, se crea uno nuevo explicando el motivo en Observaciones — la dueña ve ambos.</div>
+    </div>
+
+    <div class="page-block" id="sa-citas" data-role="superadmin">
+      <div class="page-head"><h3>Citas</h3> <code class="route">/citas</code> <span style="font-size:11px;color:var(--neutral);">— también la ve Admin</span></div>
+      <p class="lede">Agendar citas internamente y administrar la agenda del día: confirmar, reprogramar, asignar profesional, cancelar o completar.</p>
+      <div class="mock">
+        <div class="mock-bar">/citas — tarjeta de una cita</div>
+        <div class="mock-body">
+          <div class="mock-card">
+            <div style="display:flex;justify-content:space-between;">
+              <div>
+                <b style="font-size:12.5px;">2:00pm–3:00pm · Manicure Semipermanente, Cejas Cera</b>
+                <div style="font-size:11px;color:var(--neutral);">Norma Gabriela · María Pérez</div>
+              </div>
+              <span class="mock-pill pendiente">pendiente</span>
+            </div>
+            <hr class="mock-hr">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <span style="font-size:12px;">Abono: $20.000 (nequi) <a style="font-size:11px;">Ver comprobante</a></span>
+            </div>
+            <div style="display:flex;gap:10px;margin-top:6px;font-size:11.5px;">
+              <span style="color:var(--good);text-decoration:underline;">WhatsApp</span>
+              <span style="color:var(--info);text-decoration:underline;">Confirmar</span>
+              <span style="color:var(--good);text-decoration:underline;">Completar</span>
+              <span style="color:var(--bad);text-decoration:underline;">Cancelar</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p style="font-size:13px;font-weight:700;margin:14px 0 4px;">Formulario "Agendar nueva cita"</p>
+      <div class="table-wrap"><table class="field-table">
+        <thead><tr><th>Campo</th><th>Para qué sirve</th></tr></thead>
+        <tbody>
+          <tr><td>Profesional (opcional)</td><td>Se puede dejar sin asignar y asignarla después desde la misma tarjeta de la cita.</td></tr>
+          <tr><td>Servicios</td><td>Se agregan uno o varios con "Agregar"; si eliges "Adicional", aparecen los campos "¿Qué es el adicional?" y "Valor" para un concepto libre (ej. Mariposa, $15.000).</td></tr>
+          <tr><td>Fecha / Hora inicio / Hora término</td><td>La hora de <b>inicio</b> debe estar entre 9:00am y 8:00pm; la hora de <b>término</b> sí puede pasar de las 8pm si el servicio se extiende.</td></tr>
+          <tr><td>Buscar clienta</td><td>Busca por nombre o cédula entre clientas ya registradas y las trae con un clic.</td></tr>
+          <tr><td>Clienta / Cédula / Teléfono</td><td>Si la clienta no existe, se escribe aquí y aparece "Crear clienta con esta cédula" (su cuenta queda con la cédula como usuario y contraseña).</td></tr>
+          <tr><td>Abono / Medio de pago / Foto del comprobante</td><td>Si se registra un abono, el medio de pago y la foto del comprobante se vuelven obligatorios (misma regla que en el portal de la clienta).</td></tr>
+          <tr><td>Obsequio</td><td>Cortesía opcional para ofrecerle a la clienta, según disponibilidad.</td></tr>
+          <tr><td>📌 Nota interna (opcional)</td><td>Un mensaje solo para la profesional asignada — la clienta nunca lo ve. Sirve para dejarle una recomendación o instrucción puntual sobre esa cita (ej. "pedirle que traiga foto de referencia del diseño").</td></tr>
+        </tbody>
+      </table></div>
+      <p style="font-size:13px;font-weight:700;margin:14px 0 4px;">Modal "Confirmar / Reprogramar"</p>
+      <div class="table-wrap"><table class="field-table">
+        <thead><tr><th>Campo</th><th>Para qué sirve</th></tr></thead>
+        <tbody>
+          <tr><td>Fecha / Hora inicio / Hora término</td><td>Ajustables antes de confirmar o al reprogramar una cita ya confirmada.</td></tr>
+          <tr><td>Obsequio</td><td>Se puede definir o cambiar en este mismo paso.</td></tr>
+          <tr><td>📌 Nota interna (opcional)</td><td>Se puede escribir o cambiar en cualquier momento, sin importar el estado de la cita — a diferencia del resto de los datos, esta nota nunca se congela al confirmarse.</td></tr>
+          <tr><td>Vista previa del mensaje</td><td>Muestra exactamente el texto que se enviará por WhatsApp, ya actualizado con los cambios, antes de guardar.</td></tr>
+          <tr><td>"Confirmar y abrir WhatsApp" / "Guardar cambio y abrir WhatsApp"</td><td>Guarda los cambios y abre WhatsApp con el mensaje listo para enviar al número de la clienta.</td></tr>
+        </tbody>
+      </table></div>
+      <div class="callout purple">Si una cita ya confirmada se reprograma, queda marcada con la etiqueta morada "Reprogramada" y aparece en la campanita de notificaciones hasta que alguien la marque como vista.</div>
+      <div class="callout info">Al guardar una cita con profesional asignada, el sistema le manda un aviso push a su celular/navegador (si aceptó el permiso) con la hora, la clienta y la nota interna si escribiste una. También le queda en su propia campanita dentro de la app — ver <a href="#pe-registro">Personal → Registrar trabajo</a>.</div>
+    </div>
+
+    <div class="page-block" id="sa-ventas" data-role="superadmin">
+      <div class="page-head"><h3>Ventas</h3> <code class="route">/ventas</code> <span style="font-size:11px;color:var(--neutral);">— también la ve Admin</span></div>
+      <p class="lede">Venta de productos de la vitrina (distinto del insumo fiado a una empleada, que va por Préstamos).</p>
+      <div class="table-wrap"><table class="field-table">
+        <thead><tr><th>Campo</th><th>Para qué sirve</th></tr></thead>
+        <tbody>
+          <tr><td>Producto</td><td>Solo lista productos activos y con stock &gt; 0; muestra precio y stock disponible.</td></tr>
+          <tr><td>Cantidad</td><td>No puede superar el stock disponible.</td></tr>
+          <tr><td>Cliente (opcional)</td><td>Nombre de quien compra, solo como referencia.</td></tr>
+          <tr><td>Pago (monto + medio + foto)</td><td>Igual que en Cobros: se puede dividir en varios medios con "+ Agregar este medio y sumar otro", pero aquí <b>la suma debe cuadrar exactamente</b> con el total — no se permiten ventas con saldo pendiente.</td></tr>
+          <tr><td>Nota</td><td>Comentario libre.</td></tr>
+          <tr><td>"Anular" (solo Super Admin)</td><td>Pide el motivo y devuelve el producto al inventario.</td></tr>
+        </tbody>
+      </table></div>
+      <div class="callout info">Cada venta descuenta el stock del producto automáticamente al guardarse, y lo devuelve automáticamente si se anula.</div>
+    </div>
+
+    <div class="page-block" id="sa-asistencia" data-role="superadmin">
+      <div class="page-head"><h3>Asistencia</h3> <code class="route">/asistencia</code> <span style="font-size:11px;color:var(--neutral);">— también la ve Admin</span></div>
+      <p class="lede">Tabla de solo lectura con las marcaciones de jornada de todo el personal para el día elegido.</p>
+      <div class="table-wrap"><table class="field-table">
+        <thead><tr><th>Columna</th><th>Para qué sirve</th></tr></thead>
+        <tbody>
+          <tr><td>Profesional</td><td>Nombre de quien marcó.</td></tr>
+          <tr><td>Entrada / Almuerzo / Regreso / Salida</td><td>Hora exacta de cada marca; queda en blanco (—) si esa persona no la marcó ese día.</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+
+    <div class="page-block" id="sa-permisos" data-role="superadmin">
+      <div class="page-head"><h3>Permisos</h3> <code class="route">/permisos</code> <span style="font-size:11px;color:var(--neutral);">— la ve Personal, Admin y Super Admin</span></div>
+      <p class="lede">Solicitar o registrar días de descanso/permisos. Se comporta distinto según quién entra.</p>
+      <div class="table-wrap"><table class="field-table">
+        <thead><tr><th>Campo</th><th>Para qué sirve</th></tr></thead>
+        <tbody>
+          <tr><td>¿Para quién? <span style="color:var(--neutral);">(solo Super Admin)</span></td><td>Elige a sí misma o a cualquier persona del personal; lo que registre la dueña queda <b>aprobado</b> de una vez.</td></tr>
+          <tr><td>Tipo <span style="color:var(--neutral);">(solo Super Admin)</span></td><td>Día de descanso o Permiso.</td></tr>
+          <tr><td>Desde / Hasta (fecha)</td><td>Rango de días que cubre.</td></tr>
+          <tr><td>Hora desde / Hora hasta (opcional)</td><td>Si es solo por unas horas del día, no el día completo.</td></tr>
+          <tr><td>Motivo (opcional)</td><td>Explicación libre.</td></tr>
+          <tr><td>Aprobar / Rechazar <span style="color:var(--neutral);">(solo Super Admin)</span></td><td>Resuelve las solicitudes pendientes que envía el personal.</td></tr>
+        </tbody>
+      </table></div>
+      <div class="callout info">Cuando el <b>personal</b> o el <b>admin</b> solicitan un permiso para sí mismos, queda <b>pendiente</b> hasta que la dueña lo apruebe o rechace. Cuando la <b>dueña</b> lo registra, queda aprobado automáticamente.</div>
+    </div>
+
+    <div class="page-block" id="sa-contabilidad" data-role="superadmin">
+      <div class="page-head"><h3>Contabilidad</h3> <code class="route">/contabilidad</code> <span style="font-size:11px;color:var(--neutral);">— solo Super Admin</span></div>
+      <p class="lede">Tiene dos subpestañas: <b>Resumen financiero</b> y <b>Comisiones y abonos</b>.</p>
+      <div class="mock">
+        <div class="mock-bar">/contabilidad — Resumen financiero</div>
+        <div class="mock-body">
+          <div class="mock-nav"><span class="active">Resumen financiero</span><span>Comisiones y abonos</span></div>
+          <div class="mock-body" style="padding:10px 0 0;">
+            <div class="mock-grid2" style="grid-template-columns:repeat(4,1fr);">
+              <div class="mock-stat"><div class="l">Recaudado</div><div class="v" style="color:var(--good);">$1.2M</div></div>
+              <div class="mock-stat"><div class="l">Salidas</div><div class="v" style="color:var(--bad);">$180k</div></div>
+              <div class="mock-stat"><div class="l">Pago 50%</div><div class="v">$600k</div></div>
+              <div class="mock-stat"><div class="l">Ganancia</div><div class="v" style="color:var(--good);">$420k</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p style="font-size:13px;font-weight:700;margin:14px 0 4px;">Subpestaña "Resumen financiero"</p>
+      <div class="table-wrap"><table class="field-table">
+        <thead><tr><th>Campo</th><th>Para qué sirve</th></tr></thead>
+        <tbody>
+          <tr><td>Desde / Hasta + atajos</td><td>Rango de fechas a analizar; "Última semana" y "Último mes" lo llenan solos.</td></tr>
+          <tr><td>Prestado (pendiente de pago)</td><td>Aviso persistente, no depende del rango: cuánto deben en total las profesionales.</td></tr>
+          <tr><td>Recaudado (trabajado)</td><td>Valor de los servicios prestados + ventas en el rango — misma base sobre la que se calcula la comisión.</td></tr>
+          <tr><td>Salidas</td><td>Pago a proveedores + préstamos de dinero dados en el rango.</td></tr>
+          <tr><td>Pago a empleados (50%)</td><td>El 50% del valor de los servicios prestados en el rango.</td></tr>
+          <tr><td>Ganancia</td><td>Recaudado − Salidas − Comisión del 50% − Costo de mercancía vendida.</td></tr>
+          <tr><td>Cobrado en caja</td><td>Bloque aparte, solo de referencia: cuánto dinero entró <i>físicamente</i> (cobros + abonos + ventas). Puede no ser igual al Recaudado si algo de esta semana sigue pendiente de cobro, o si un abono cobrado ahora es de una cita de otra fecha.</td></tr>
+        </tbody>
+      </table></div>
+      <p style="font-size:13px;font-weight:700;margin:14px 0 4px;">Subpestaña "Comisiones y abonos" <span style="color:var(--neutral);font-weight:400;">(la misma información que ve el Admin en "Reportes")</span></p>
+      <div class="table-wrap"><table class="field-table">
+        <thead><tr><th>Columna / Campo</th><th>Para qué sirve</th></tr></thead>
+        <tbody>
+          <tr><td>Tabla de comisiones</td><td>Por cada especialista: cantidad de servicios, 50% de comisión, cuánto Debe (de préstamos pendientes) y cuánto Le pagas en definitiva (comisión menos deuda).</td></tr>
+          <tr><td>Abonos registrados</td><td>Lista de cada abono de cita en el rango: clienta, servicio, fecha, medio de pago y estado de la cita, con el total sumado arriba.</td></tr>
+        </tbody>
+      </table></div>
+      <div class="callout warn">"Recaudado" y la "Comisión del 50%" siempre usan la <b>misma base</b> (el valor de lo trabajado) a propósito, para que estas dos cuentas cuadren entre sí sin importar cuándo se cobró el dinero.</div>
+    </div>
+
+    <div class="page-block" id="sa-prestamos" data-role="superadmin">
+      <div class="page-head"><h3>Préstamos</h3> <code class="route">/prestamos</code> <span style="font-size:11px;color:var(--neutral);">— solo Super Admin</span></div>
+      <p class="lede">Préstamos de dinero o insumos fiados al personal, con pagos parciales tipo "cuenta corriente".</p>
+      <div class="table-wrap"><table class="field-table">
+        <thead><tr><th>Campo</th><th>Para qué sirve</th></tr></thead>
+        <tbody>
+          <tr><td>Persona</td><td>A quién se le presta (solo personal activo).</td></tr>
+          <tr><td>Tipo</td><td>Préstamo de dinero o Insumo fiado.</td></tr>
+          <tr><td>Descripción</td><td>Ej. "adelanto" o "labial, esmalte…".</td></tr>
+          <tr><td>Monto</td><td>Valor del préstamo/fiado.</td></tr>
+          <tr><td>¿Por qué medio se dio?</td><td>Solo si fue dinero en efectivo/Nequi/etc. (para que salga reflejado en el cierre de caja de ese día).</td></tr>
+          <tr><td>Producto del inventario (opcional)</td><td>Si el insumo fiado es un producto que manejas en Inventario, elígelo aquí para que <b>descuente el stock automáticamente</b>.</td></tr>
+          <tr><td>"Registrar pago ▾"</td><td>Abre un mini-formulario para abonar a la deuda: monto, medio de pago y nota — permite pagos parciales.</td></tr>
+          <tr><td>"Ya se descontó de su comisión"</td><td>Para saldar la deuda SIN que entre dinero nuevo a caja (ej. se le pagó menos comisión ese mes) — no queda registrado en el cierre de caja.</td></tr>
+        </tbody>
+      </table></div>
+      <div class="callout info">"Deben (pendiente)" muestra el total que debe cada persona ahora mismo, sumando todos sus préstamos activos menos lo que ya ha pagado.</div>
+    </div>
+
+    <div class="page-block" id="sa-inventario" data-role="superadmin">
+      <div class="page-head"><h3>Inventario</h3> <code class="route">/productos</code> <span style="font-size:11px;color:var(--neutral);">— solo Super Admin</span></div>
+      <p class="lede">Catálogo de productos de vitrina: precio, costo y stock. Las ventas y los insumos fiados lo descuentan solos.</p>
+      <div class="table-wrap"><table class="field-table">
+        <thead><tr><th>Campo</th><th>Para qué sirve</th></tr></thead>
+        <tbody>
+          <tr><td>Nombre / Descripción</td><td>Identifican el producto.</td></tr>
+          <tr><td>Precio de venta</td><td>Lo que paga quien lo compra.</td></tr>
+          <tr><td>Costo (opcional)</td><td>Lo que le cuesta a ti — sirve para calcular el "costo de mercancía vendida" en Contabilidad.</td></tr>
+          <tr><td>Stock inicial / Stock</td><td>Unidades disponibles; se edita en línea con su botón "Guardar" propio.</td></tr>
+          <tr><td>Activo / Inactivo</td><td>Un producto inactivo no aparece para vender ni prestar, pero no se borra.</td></tr>
+        </tbody>
+      </table></div>
+      <div class="callout warn">Con 3 unidades o menos, el producto muestra "⚠ Stock bajo" en la lista.</div>
+    </div>
+
+    <div class="page-block" id="sa-historial" data-role="superadmin">
+      <div class="page-head"><h3>Historial</h3> <code class="route">/historial</code> <span style="font-size:11px;color:var(--neutral);">— solo Super Admin</span></div>
+      <p class="lede">Buscador de todas las atenciones hechas (hasta las últimas 300), con sus fotos de evidencia.</p>
+      <div class="table-wrap"><table class="field-table">
+        <thead><tr><th>Campo</th><th>Para qué sirve</th></tr></thead>
+        <tbody>
+          <tr><td>Buscar por clienta o servicio</td><td>Filtra la lista en vivo.</td></tr>
+          <tr><td>"Ver foto"</td><td>Abre la foto del trabajo terminado en una pestaña nueva.</td></tr>
+        </tbody>
+      </table></div>
+      <div class="callout warn">Las fotos se conservan <b>1 mes</b>; después de ese tiempo el registro queda (fecha, clienta, precio) pero la foto se borra automáticamente para ahorrar espacio.</div>
+    </div>
+
+    <div class="page-block" id="sa-auditoria" data-role="superadmin">
+      <div class="page-head"><h3>Auditoría</h3> <code class="route">/auditoria</code> <span style="font-size:11px;color:var(--neutral);">— solo Super Admin</span></div>
+      <p class="lede">El registro de "quién hizo qué, y cuándo" en casi toda la información importante del sistema.</p>
+      <div class="table-wrap"><table class="field-table">
+        <thead><tr><th>Campo</th><th>Para qué sirve</th></tr></thead>
+        <tbody>
+          <tr><td>Desde / Hasta</td><td>Rango de fechas ("Hoy" y "Última semana" como atajos).</td></tr>
+          <tr><td>Tabla</td><td>Filtra por tipo de movimiento: Trabajo registrado, Cita, Cobro, Cierre de caja, Marcación de jornada, Permiso/descanso, Préstamo, Pago de préstamo, Producto, Venta.</td></tr>
+          <tr><td>Etiqueta "creado" / "modificado"</td><td>Si fue un registro nuevo o un cambio sobre uno existente.</td></tr>
+          <tr><td>"Ver detalle ▾"</td><td>Despliega el detalle técnico completo de ese movimiento (los valores exactos que cambiaron).</td></tr>
+        </tbody>
+      </table></div>
+      <div class="callout info">Útil para resolver dudas o revisar "movimientos raros" — cada fila dice qué persona (y con qué rol) hizo el cambio.</div>
+    </div>
+
+    <div class="page-block" id="sa-usuarios" data-role="superadmin">
+      <div class="page-head"><h3>Usuarios</h3> <code class="route">/usuarios</code> <span style="font-size:11px;color:var(--neutral);">— solo Super Admin</span></div>
+      <p class="lede">Crear cuentas nuevas y administrar el personal y las clientas: rol, especialidades, acceso y datos personales.</p>
+      <div class="mock">
+        <div class="mock-bar">/usuarios — fila de una persona</div>
+        <div class="mock-body">
+          <div class="mock-card">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <b style="flex:1;font-size:12.5px;">Norma Gabriela</b>
+              <span class="mock-select" style="width:auto;margin:0;">Personal (profesional)</span>
+              <span style="font-size:10.5px;font-weight:700;background:var(--good-bg);color:var(--good);padding:3px 8px;border-radius:999px;">Con acceso</span>
+            </div>
+            <div style="font-size:11px;color:var(--neutral);margin:6px 0;">Especialidades: <b style="color:var(--brand-700);">Manicurista</b> Estilista Lashista</div>
+            <div style="font-size:11px;display:flex;gap:12px;color:var(--brand-600);">
+              <span>Datos básicos ▾</span><span>Usuario / contraseña ▾</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p style="font-size:13px;font-weight:700;margin:14px 0 4px;">Formulario "Crear usuario"</p>
+      <div class="table-wrap"><table class="field-table">
+        <thead><tr><th>Campo</th><th>Para qué sirve</th></tr></thead>
+        <tbody>
+          <tr><td>Nombre</td><td>Nombre con el que aparecerá en toda la app.</td></tr>
+          <tr><td>Rol</td><td>Clienta, Personal (profesional), Admin, o Super Admin (Dueña).</td></tr>
+          <tr><td>Usuario o correo</td><td>Si escribes solo un nombre (sin @), entrará escribiendo ese nombre como usuario; para una clienta con correo real, se pone completo.</td></tr>
+          <tr><td>Contraseña</td><td>Mínimo 6 caracteres.</td></tr>
+          <tr><td>Teléfono (opcional)</td><td>Para contacto/WhatsApp.</td></tr>
+        </tbody>
+      </table></div>
+      <p style="font-size:13px;font-weight:700;margin:14px 0 4px;">Por cada persona en la lista</p>
+      <div class="table-wrap"><table class="field-table">
+        <thead><tr><th>Campo / botón</th><th>Para qué sirve</th></tr></thead>
+        <tbody>
+          <tr><td>Selector de rol</td><td>Cambia el rol de esa persona en cualquier momento.</td></tr>
+          <tr><td>"Con acceso" / "Sin acceso"</td><td>Le quita o devuelve la posibilidad de iniciar sesión, sin borrar sus datos ni su historial.</td></tr>
+          <tr><td>Especialidades (solo Personal)</td><td>Manicurista / Estilista / Lashista — es solo una etiqueta informativa: a cualquier profesional se le puede asignar cualquier servicio sin importar su especialidad.</td></tr>
+          <tr><td>"Datos básicos ▾"</td><td>Editar apellidos, cédula, teléfono, correo, dirección, fecha de nacimiento y fecha de ingreso al spa.</td></tr>
+          <tr><td>"Usuario / contraseña ▾"</td><td>Cambiarle el usuario/correo de acceso y/o la contraseña a esa persona — solo la dueña puede hacer esto.</td></tr>
+        </tbody>
+      </table></div>
+      <div class="callout good">Pestañas "Personal de la empresa" y "Clientes" separan el conteo — así siempre ves cuántas cuentas de cada tipo hay activas.</div>
+    </div>
+
+    <div class="page-block" id="sa-servicios" data-role="superadmin">
+      <div class="page-head"><h3>Servicios</h3> <code class="route">/servicios</code> <span style="font-size:11px;color:var(--neutral);">— solo Super Admin</span></div>
+      <p class="lede">El catálogo de precios del salón, agrupado por categoría, y los obsequios disponibles para ofrecer.</p>
+      <div class="table-wrap"><table class="field-table">
+        <thead><tr><th>Campo</th><th>Para qué sirve</th></tr></thead>
+        <tbody>
+          <tr><td>Agregar nuevo servicio</td><td>Categoría, precio y nombre — no puede repetirse el mismo nombre dentro de la misma categoría.</td></tr>
+          <tr><td>Precio (por servicio existente)</td><td>Editable en cualquier momento; el cambio solo aplica a los trabajos que se registren de ahí en adelante, no cambia el histórico.</td></tr>
+          <tr><td>Activo / Inactivo</td><td>Un servicio inactivo deja de ofrecerse (aparece tachado) sin borrar su historial.</td></tr>
+          <tr><td>Obsequios — agregar</td><td>Nombre de la cortesía nueva (ej. "Baño de burbujas"); se suma a la lista que aparece al agendar/confirmar una cita.</td></tr>
+          <tr><td>Obsequios — activo/inactivo</td><td>Oculta un obsequio de la lista sin borrarlo del historial de citas que ya lo usaron.</td></tr>
+        </tbody>
+      </table></div>
+      <div class="callout info">Las categorías actuales son: Manicure, Sistemas/Extensiones, Mantenimientos, Retiros y Reparaciones, Pedicura, Pestañas, Retoque de Pestañas, Depilación, Cejas, y Adicional (el de monto y concepto libre).</div>
+    </div>
+
+    <!-- ======================= ADMIN ======================= -->
+    <div class="role-section" id="admin" data-role="admin">
+      <h2>Admin <span class="role-tag tag-admin">operación diaria</span></h2>
+      <p class="role-intro">Es quien lleva el día a día del salón: agenda, cobra, cierra caja y vende de la vitrina. No ve inventario, contabilidad completa, auditoría, usuarios ni servicios/precios — eso queda solo para la dueña.</p>
+    </div>
+
+    <div class="page-block" id="ad-resumen" data-role="admin">
+      <div class="page-head"><h3>Qué ve el Admin</h3></div>
+      <p class="lede">El Admin comparte estas pantallas exactamente iguales a como se explicaron arriba para Super Admin — solo cambia lo que puede ver o no:</p>
+      <div class="table-wrap"><table class="field-table">
+        <thead><tr><th>Pantalla</th><th>Diferencia frente a Super Admin</th></tr></thead>
+        <tbody>
+          <tr><td><a href="#sa-cobros">Cobros</a></td><td>Exactamente igual.</td></tr>
+          <tr><td><a href="#sa-cierre">Cierre de caja</a></td><td>El Admin ve y <b>llena</b> el formulario de cierre; la dueña solo lo consulta, ya lleno.</td></tr>
+          <tr><td><a href="#sa-citas">Citas</a></td><td>Exactamente igual.</td></tr>
+          <tr><td><a href="#sa-ventas">Ventas</a></td><td>Igual, salvo que el botón "Anular" una venta es exclusivo de Super Admin.</td></tr>
+          <tr><td><a href="#sa-asistencia">Asistencia</a></td><td>Exactamente igual.</td></tr>
+          <tr><td><a href="#sa-permisos">Permisos</a></td><td>El Admin solicita permisos para sí mismo (quedan pendientes); no puede aprobar/rechazar ni registrar para otra persona.</td></tr>
+          <tr><td><a href="#pe-jornada">Mi jornada</a></td><td>El Admin también marca su propia jornada, igual que el Personal.</td></tr>
+        </tbody>
+      </table></div>
+      <div class="callout info">No tiene acceso a: Panel, Contabilidad, Préstamos, Inventario, Historial, Auditoría, Usuarios ni Servicios — esas quedan reservadas para la dueña.</div>
+    </div>
+
+    <div class="page-block" id="ad-reportes" data-role="admin">
+      <div class="page-head"><h3>Reportes</h3> <code class="route">/reportes</code> <span style="font-size:11px;color:var(--neutral);">— exclusivo de Admin</span></div>
+      <p class="lede">Es la misma información que la dueña ve en la subpestaña <a href="#sa-contabilidad">"Comisiones y abonos" de Contabilidad</a>: cuánto se le debe pagar a cada especialista y los abonos registrados en el rango — pero sin el resto de Contabilidad (recaudo, salidas, ganancia).</p>
+    </div>
+
+    <!-- ======================= PERSONAL ======================= -->
+    <div class="role-section" id="personal" data-role="personal">
+      <h2>Personal (profesional) <span class="role-tag tag-personal">manicurista · estilista · lashista</span></h2>
+      <p class="role-intro">Marca su jornada, registra los trabajos que hace (con foto de evidencia) y consulta sus propios datos y préstamos. Nunca ve dinero de otras personas ni cobra directamente a las clientas.</p>
+      <div class="callout good" style="margin-top:14px;">
+        <b>🔔 Avisos cuando te asignan una cita.</b> Llegan de dos formas independientes, para que si una falla la otra sirva de respaldo: una notificación push al celular/navegador (como cualquier app — acepta el permiso la primera vez que entras para no perdértelas), y tu propia campanita junto al signo de ayuda, visible arriba en cualquier pantalla, con tus citas de hoy y la nota interna que te haya dejado la dueña si escribió una.
+      </div>
+    </div>
+
+    <div class="page-block" id="pe-jornada" data-role="personal">
+      <div class="page-head"><h3>Mi jornada</h3> <code class="route">/jornada</code></div>
+      <p class="lede">Marca su entrada, almuerzo y salida del día. Pantalla de inicio para este rol.</p>
+      <div class="mock">
+        <div class="mock-bar">/jornada</div>
+        <div class="mock-body">
+          <div class="mock-grid2">
+            <div class="mock-card" style="background:var(--brand-50);border-color:var(--brand-200);text-align:left;">
+              <div style="font-size:11px;">Entrada</div><div style="font-weight:700;color:var(--brand-700);">08:02 am</div>
+            </div>
+            <div class="mock-card" style="background:var(--fill-a);color:#fff;border:none;">
+              <div style="font-size:11px;color:#ffe1ee;">Salgo a almorzar</div><div style="font-weight:700;">—</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="table-wrap"><table class="field-table">
+        <thead><tr><th>Botón</th><th>Para qué sirve</th></tr></thead>
+        <tbody>
+          <tr><td>Entrada</td><td>Se habilita apenas se entra a la app; después de marcarla queda con la hora exacta.</td></tr>
+          <tr><td>Salgo a almorzar</td><td>Solo se habilita después de marcar Entrada.</td></tr>
+          <tr><td>Vuelvo del almuerzo</td><td>Solo se habilita después de marcar "Salgo a almorzar".</td></tr>
+          <tr><td>Salida</td><td>Se habilita después de Entrada, y solo si el almuerzo (si se marcó que salió) ya se cerró con "Vuelvo del almuerzo".</td></tr>
+        </tbody>
+      </table></div>
+      <div class="callout info">Cada botón solo se puede marcar una vez por día y en el orden lógico — no se puede marcar Salida antes de Entrada, por ejemplo.</div>
+    </div>
+
+    <div class="page-block" id="pe-registro" data-role="personal">
+      <div class="page-head"><h3>Registrar trabajo</h3> <code class="route">/registro</code></div>
+      <p class="lede">Donde la profesional deja constancia de lo que hizo — con foto obligatoria del resultado. Aquí <b>no se cobra dinero</b>: eso lo hace el admin/dueña después en Cobros.</p>
+      <div class="mock">
+        <div class="mock-bar">/registro</div>
+        <div class="mock-body">
+          <div class="mock-card">
+            <h4 style="font-size:12.5px;">Tus citas de hoy</h4>
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <div><b style="font-size:12px;">2:00pm · María Pérez</b><div style="font-size:10.5px;color:var(--neutral);">Manicure Semipermanente · abonó $20.000</div></div>
+              <a class="mock-btn" style="padding:5px 10px;font-size:11px;">Registrar</a>
+            </div>
+          </div>
+          <div class="mock-card">
+            <h4 style="font-size:12.5px;">Carrito de servicios</h4>
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <span style="font-size:12px;">Manicure Semipermanente</span>
+              <span style="display:flex;align-items:center;gap:8px;font-size:11px;">
+                <b>$50.000</b>
+                <span style="color:var(--brand-600);font-weight:700;">Cambiar</span>
+                <span style="color:var(--bad);">Quitar</span>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="table-wrap"><table class="field-table">
+        <thead><tr><th>Campo</th><th>Para qué sirve</th></tr></thead>
+        <tbody>
+          <tr><td>Tus citas de hoy</td><td>Lista de citas asignadas a esa profesional hoy; el botón "Registrar" carga automáticamente los servicios, el precio y el concepto/valor si alguno era "Adicional".</td></tr>
+          <tr><td>📌 Nota interna (si la dueña dejó una)</td><td>Aparece resaltada en amarillo debajo de la cita, dentro de "Tus citas de hoy" — un recordatorio o instrucción puntual solo para ti sobre esa cita en particular.</td></tr>
+          <tr><td>Cliente</td><td>Nombre de quien se atendió (se llena solo si viene de una cita).</td></tr>
+          <tr><td>Teléfono</td><td>Por privacidad, este rol <b>no ve el número</b> de la clienta: aparece bloqueado y con puntos (••••••••••), aunque el dato sigue guardado para la administración.</td></tr>
+          <tr><td>Servicio Adicional (selector)</td><td>Elige el servicio hecho; si es la categoría "Adicional", pide un concepto obligatorio (ej. "diseño personalizado").</td></tr>
+          <tr><td>Precio</td><td>Se llena solo con el precio de catálogo del servicio elegido, pero se puede ajustar.</td></tr>
+          <tr><td>Descuento (%)</td><td>Si se aplica alguno, pide obligatoriamente el motivo (ej. "promoción").</td></tr>
+          <tr><td>"+ Agregar servicio"</td><td>Suma esa línea al carrito para poder registrar varios servicios de la misma visita juntos.</td></tr>
+          <tr><td>"Cambiar" (por línea del carrito)</td><td>Para cuando la clienta cambia de servicio a mitad de la atención, o la profesional la convence de uno mejor que el que pidió: quita esa línea y deja el servicio y precio listos en el formulario de arriba para reemplazarlos por los nuevos.</td></tr>
+          <tr><td>"Quitar" (por línea del carrito)</td><td>Elimina esa línea sin reemplazarla.</td></tr>
+          <tr><td>Foto del trabajo terminado</td><td><b>Obligatoria</b> en todos los casos — es la evidencia del resultado. Se puede tomar en el momento o elegir una que ya esté guardada en el celular.</td></tr>
+          <tr><td>"Registrar N trabajo(s)"</td><td>Guarda todos los servicios del carrito como una sola "visita"; si venía de una cita, la marca como Completada.</td></tr>
+        </tbody>
+      </table></div>
+      <div class="callout info">
+        <b>¿La clienta cambió de servicio o se llevó uno mejor del que pidió?</b> Usa "Cambiar" en esa línea del carrito — el total y el saldo a cobrar se recalculan solos con el nuevo precio, sin tocar el abono que la clienta ya pagó (ese abono no cambia, solo se ajusta lo que falta por cobrar).
+      </div>
+      <div class="callout good">Al guardar, si venía de una cita con abono, el mensaje confirma cuánto queda de saldo — pero ese saldo lo cobrará la administradora, nunca la profesional.</div>
+    </div>
+
+    <div class="page-block" id="pe-permisos" data-role="personal">
+      <div class="page-head"><h3>Permisos</h3> <code class="route">/permisos</code></div>
+      <p class="lede">Solicitar un permiso o descanso propio. Ver la explicación completa en <a href="#sa-permisos">Permisos (Super Admin)</a> — para este rol siempre queda <b>pendiente de aprobación</b> de la dueña.</p>
+    </div>
+
+    <div class="page-block" id="pe-perfil" data-role="personal">
+      <div class="page-head"><h3>Mi perfil</h3> <code class="route">/mi-perfil</code></div>
+      <p class="lede">Consulta de solo lectura de sus propios datos y de lo que debe en préstamos.</p>
+      <div class="table-wrap"><table class="field-table">
+        <thead><tr><th>Campo</th><th>Para qué sirve</th></tr></thead>
+        <tbody>
+          <tr><td>Especialidades, cédula, teléfono, correo, dirección, nacimiento, ingreso al spa</td><td>Datos personales que cargó la dueña; si algo está mal, se le avisa a la administración para corregirlo (la profesional no los edita ella misma).</td></tr>
+          <tr><td>Mis préstamos / fiados</td><td>Historial de lo prestado, con "Debes $X" si aún tiene saldo pendiente.</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+
+    <!-- ======================= CLIENTE ======================= -->
+    <div class="role-section" id="cliente" data-role="cliente">
+      <h2>Clienta <span class="role-tag tag-cliente">agenda su propia cita</span></h2>
+      <p class="role-intro">Se crea su propia cuenta con su cédula y desde ahí solicita citas — el salón las revisa y confirma. Es el único rol que no entra al resto del sistema, solo a su Portal.</p>
+    </div>
+
+    <div class="page-block" id="cl-registro" data-role="cliente">
+      <div class="page-head"><h3>Crear cuenta</h3> <code class="route">/registro-cliente</code></div>
+      <p class="lede">Registro público, sin necesitar que nadie del salón la cree primero.</p>
+      <div class="table-wrap"><table class="field-table">
+        <thead><tr><th>Campo</th><th>Para qué sirve</th></tr></thead>
+        <tbody>
+          <tr><td>Nombre completo</td><td>Con el que quedará identificada en el sistema.</td></tr>
+          <tr><td>Cédula (NUIP / CC)</td><td>Se vuelve su usuario Y su contraseña — fácil de recordar, mínimo 6 dígitos.</td></tr>
+          <tr><td>Teléfono (WhatsApp)</td><td>Para que el salón le envíe la confirmación de sus citas.</td></tr>
+        </tbody>
+      </table></div>
+      <div class="callout good">Si la cédula ya tiene cuenta, el sistema lo avisa y sugiere iniciar sesión en vez de crear una nueva.</div>
+    </div>
+
+    <div class="page-block" id="cl-portal" data-role="cliente">
+      <div class="page-head"><h3>Portal / Solicitar cita</h3> <code class="route">/portal</code></div>
+      <p class="lede">Su única pantalla dentro del sistema: pedir una cita nueva y ver el estado de las que ya solicitó.</p>
+      <div class="mock">
+        <div class="mock-bar">/portal</div>
+        <div class="mock-body">
+          <p style="font-weight:700;margin:0 0 8px;">Hola, María Pérez 💗</p>
+          <label class="mock-label">¿Qué servicios quieres?</label>
+          <div class="mock-select">Selecciona un servicio</div>
+          <div class="mock-row"><div><label class="mock-label">Fecha deseada</label><div class="mock-input">12/08/2026</div></div><div><label class="mock-label">Hora deseada</label><div class="mock-input">02:00 pm</div></div></div>
+          <label class="mock-label">Profesional (opcional)</label>
+          <div class="mock-select">Cualquiera (el salón asigna)</div>
+          <div class="mock-card" style="background:var(--brand-50);border-color:var(--brand-200);">
+            <b style="font-size:11.5px;color:var(--brand-700);">Abono para apartar tu cita</b>
+            <div class="mock-row" style="margin-top:6px;"><div><label class="mock-label">Valor abonado</label><div class="mock-input">$20.000</div></div><div><label class="mock-label">Medio de pago</label><div class="mock-select">Nequi</div></div></div>
+            <label class="mock-label">Foto del comprobante</label>
+            <div class="mock-input" style="color:var(--neutral);">📎 comprobante.jpg</div>
+          </div>
+          <a class="mock-btn full">Solicitar cita</a>
+        </div>
+      </div>
+      <div class="table-wrap"><table class="field-table">
+        <thead><tr><th>Campo</th><th>Para qué sirve</th></tr></thead>
+        <tbody>
+          <tr><td>¿Qué servicios quieres?</td><td>Se pueden elegir varios; si incluye "Adicional", pide qué es (ej. Mariposa) y su valor (ej. $15.000).</td></tr>
+          <tr><td>Fecha deseada</td><td>No permite fechas anteriores a hoy.</td></tr>
+          <tr><td>Hora deseada</td><td>Debe estar entre 9:00am y 8:00pm.</td></tr>
+          <tr><td>Profesional (opcional)</td><td>Si la elegida no está libre a esa hora, el sistema sugiere cuáles sí lo están para esa misma hora.</td></tr>
+          <tr><td>Abono: Valor, Medio de pago, Foto</td><td>Los tres son <b>obligatorios</b> para poder apartar la cita — el salón revisa el comprobante antes de confirmar.</td></tr>
+          <tr><td>Nota (opcional)</td><td>Cualquier detalle para el salón.</td></tr>
+          <tr><td>Mis citas</td><td>Historial propio con el estado de cada una: En espera de confirmación, Confirmada, Completada o Cancelada.</td></tr>
+        </tbody>
+      </table></div>
+      <div class="callout warn">La clienta define una hora estimada; la duración real y la hora de término las ajusta el salón al confirmar la cita.</div>
+    </div>
+
+    <!-- ======================= REFERENCIA ======================= -->
+    <div class="role-section" id="referencia">
+      <h2>Referencia rápida</h2>
+    </div>
+
+    <div class="page-block" id="glosario">
+      <div class="page-head"><h3>Glosario</h3></div>
+      <dl class="glossary">
+        <dt>Visita</dt><dd>Uno o varios servicios registrados juntos para la misma clienta en la misma atención; es la unidad que se cobra como una sola cuenta en "Cobros".</dd>
+        <dt>Cuenta por cobrar</dt><dd>El saldo que aún debe una clienta después de descontar su abono; aparece en "Cobros" hasta que el admin/dueña lo cobra.</dd>
+        <dt>Abono</dt><dd>Adelanto que paga la clienta para apartar su cita; siempre requiere medio de pago y foto de comprobante.</dd>
+        <dt>Adicional</dt><dd>Servicio "comodín" de valor y concepto libres (ej. una Mariposa a $15.000) para lo que no está en el catálogo fijo.</dd>
+        <dt>Obsequio</dt><dd>Cortesía opcional (ej. un masaje corto) que se puede ofrecer al agendar o confirmar una cita.</dd>
+        <dt>Reprogramación</dt><dd>Cuando una cita YA confirmada cambia de fecha/hora; queda marcada y avisa en la campanita hasta que alguien la revise.</dd>
+        <dt>Auditoría</dt><dd>Registro automático de quién creó o modificó cada dato importante del sistema, y cuándo.</dd>
+        <dt>Campanita 🔔</dt><dd>Aviso en la barra superior. Para Admin/Super Admin muestra las citas pendientes de confirmar y las reprogramadas sin revisar. Para Personal muestra sus propias citas asignadas de hoy — es solo informativa, sin botones de confirmar ni reprogramar.</dd>
+        <dt>Nota interna 📌</dt><dd>Mensaje opcional que la dueña o el admin escriben al agendar o confirmar una cita, visible solo para la profesional asignada (por push y en su campanita) — la clienta nunca la ve.</dd>
+        <dt>Notificación push</dt><dd>Aviso tipo celular/navegador que le llega a la profesional cuando se le asigna una cita, incluso sin tener la app abierta. Requiere haber aceptado el permiso de notificaciones la primera vez que entró.</dd>
+      </dl>
+    </div>
+
+    <div class="page-block" id="accesos">
+      <div class="page-head"><h3>Tabla de accesos</h3></div>
+      <div class="table-wrap">
+        <div class="table-wrap"><table class="field-table">
+          <thead><tr><th>Pantalla</th><th>Super Admin</th><th>Admin</th><th>Personal</th><th>Clienta</th></tr></thead>
+          <tbody>
+            <tr><td>Panel</td><td>✓</td><td>—</td><td>—</td><td>—</td></tr>
+            <tr><td>Cobros</td><td>✓</td><td>✓</td><td>—</td><td>—</td></tr>
+            <tr><td>Cierre de caja</td><td>✓ (solo lectura)</td><td>✓ (lo llena)</td><td>—</td><td>—</td></tr>
+            <tr><td>Citas</td><td>✓</td><td>✓</td><td>—</td><td>—</td></tr>
+            <tr><td>Ventas</td><td>✓ (+ anular)</td><td>✓</td><td>—</td><td>—</td></tr>
+            <tr><td>Asistencia</td><td>✓</td><td>✓</td><td>—</td><td>—</td></tr>
+            <tr><td>Permisos</td><td>✓ (aprueba)</td><td>✓ (solicita)</td><td>✓ (solicita)</td><td>—</td></tr>
+            <tr><td>Contabilidad / Reportes</td><td>✓ completa</td><td>✓ solo comisiones</td><td>—</td><td>—</td></tr>
+            <tr><td>Préstamos</td><td>✓</td><td>—</td><td>—</td><td>—</td></tr>
+            <tr><td>Inventario</td><td>✓</td><td>—</td><td>—</td><td>—</td></tr>
+            <tr><td>Historial</td><td>✓</td><td>—</td><td>—</td><td>—</td></tr>
+            <tr><td>Auditoría</td><td>✓</td><td>—</td><td>—</td><td>—</td></tr>
+            <tr><td>Usuarios</td><td>✓</td><td>—</td><td>—</td><td>—</td></tr>
+            <tr><td>Servicios</td><td>✓</td><td>—</td><td>—</td><td>—</td></tr>
+            <tr><td>Mi jornada</td><td>—</td><td>✓</td><td>✓</td><td>—</td></tr>
+            <tr><td>Registrar trabajo</td><td>—</td><td>—</td><td>✓</td><td>—</td></tr>
+            <tr><td>Mi perfil</td><td>—</td><td>—</td><td>✓</td><td>—</td></tr>
+            <tr><td>Portal (solicitar cita)</td><td>—</td><td>—</td><td>—</td><td>✓</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <footer class="doc-footer">
+      Manual generado a partir de la app en producción (agosto de 2026). Los textos, colores y campos de aquí son los mismos que verás usándola —
+      si algo cambia en el sistema, este manual debería actualizarse junto con ese cambio.
+      <br>Sistema developed by Vulpex Software SAS.
+    </footer>
+
+  </main>
+</div>
+
+<script>
+  (function () {
+    var ROL_LABEL = {
+      superadmin: 'Super Admin (dueña)',
+      admin: 'Admin',
+      personal: 'Personal (profesional)',
+      cliente: 'Clienta'
+    };
+    var params = new URLSearchParams(location.search);
+    var rol = params.get('rol');
+
+    if (!rol || rol === 'superadmin' || !ROL_LABEL[rol]) {
+      return; // vista completa, sin filtrar
+    }
+
+    document.querySelectorAll('[data-role]').forEach(function (el) {
+      if (el.getAttribute('data-role') !== rol) el.style.display = 'none';
+    });
+
+    var fullBand = document.getElementById('role-band-full');
+    if (fullBand) fullBand.style.display = 'none';
+
+    var banner = document.getElementById('filtro-rol-banner');
+    if (banner) {
+      banner.innerHTML =
+        'Mostrando solo la sección para <span>' + ROL_LABEL[rol] + '</span> —' +
+        ' el resto del manual no aplica a tu perfil.';
+      banner.className = 'filtro-banner';
+    }
+  })();
+</script>
+
+</body>
+</html>

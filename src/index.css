@@ -1,0 +1,49 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Paleta por defecto de la plataforma KALLOS (dorado). Formato "R G B"
+     (sin comas) para que Tailwind pueda aplicarle opacidad con /<alpha>.
+     Un salón con color_primario propio pisa --brand-500/600/700 en runtime
+     (ver src/lib/theme.ts) -- el resto de la escala se queda fija. */
+  --brand-50: 251 247 236;
+  --brand-100: 245 235 206;
+  --brand-200: 234 217 160;
+  --brand-300: 223 198 115;
+  --brand-400: 217 188 85;
+  --brand-500: 212 175 55;
+  --brand-600: 184 145 43;
+  --brand-700: 143 111 31;
+  --brand-800: 107 83 22;
+  --brand-900: 71 55 14;
+
+  /* Sidebar/header (--panel/--panel-fg) y el acento que contrasta con él
+     (--accent2). Por defecto son el negro+dorado de KALLOS; un salón Pro/
+     Enterprise con color_primario/color_secundario los pisa en runtime
+     (ver src/lib/theme.ts). */
+  --panel: 11 11 13;
+  --panel-fg: 223 198 115;
+  --accent2: 212 175 55;
+  /* Fondo de página: --page-tint es el "papel" (casi blanco por defecto)
+     y --page-mesh son las líneas diagonales encima de ese papel, con su
+     propia opacidad (--page-mesh-alpha) -- por defecto MUY sutil (el
+     dorado apagado de siempre). Un salón Pro/Enterprise con
+     color_secundario pisa los tres en runtime (ver src/lib/theme.ts) con
+     una malla bien visible, del color que haya elegido -- como el
+     original rosado de Yessica Arango, pero por salón. */
+  --page-tint: 247 245 240;
+  --page-mesh: 212 175 55;
+  --page-mesh-alpha: 0.05;
+}
+
+body {
+  @apply text-gray-900;
+  min-height: 100vh;
+  background-color: rgb(var(--page-tint));
+  background-image:
+    repeating-linear-gradient(45deg, rgb(var(--page-mesh) / var(--page-mesh-alpha)) 0, rgb(var(--page-mesh) / var(--page-mesh-alpha)) 1px, transparent 1px, transparent 42px),
+    repeating-linear-gradient(-45deg, rgb(var(--page-mesh) / var(--page-mesh-alpha)) 0, rgb(var(--page-mesh) / var(--page-mesh-alpha)) 1px, transparent 1px, transparent 42px);
+  background-size: auto, auto;
+  background-repeat: repeat, repeat;
+}
