@@ -287,6 +287,9 @@ function CampanitaPersonal({ citas, onIrARegistro }: { citas: Cita[]; onIrARegis
                   <p className="text-sm font-medium">
                     <span className="text-brand-600">{c.hora.slice(0, 5)}</span> · {c.cliente_nombre}
                   </p>
+                  {c.obsequio && (
+                    <p className="text-xs text-brand-700 bg-brand-50 rounded px-2 py-0.5">🎁 Obsequio: {c.obsequio}</p>
+                  )}
                   {c.nota_interna && (
                     <p className="text-xs text-amber-700 bg-amber-50 rounded px-2 py-0.5">📌 {c.nota_interna}</p>
                   )}

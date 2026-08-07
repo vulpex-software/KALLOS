@@ -324,34 +324,59 @@ guarda por cada FK cruzada, igual que se hizo para `productos`.
     después de un reinicio del PC, este es el primer contenedor a revisar
     con `docker ps -a | findstr edge`.
 
-## Cómo poner esto a andar
+## Producción (en vivo desde 2026-08-07)
+
+KALLOS ya está desplegado de verdad, no es solo un plan:
+
+- **App**: https://kallos-gamma.vercel.app (Vercel, proyecto `vulpex/kallos`,
+  cuenta GitHub `vulpex-software`). Deploy automático: cada `git push` a
+  `main` en `github.com/vulpex-software/KALLOS` dispara un build y deploy
+  solo, no hace falta correr `vercel deploy` a mano salvo que se quiera
+  forzar un deploy sin commit nuevo.
+- **Base de datos**: proyecto Supabase Cloud `rwadambgkqrrvvzzjtxw`, región
+  `us-east-1`. Esquema completo aplicado (25 tablas, todas las migraciones
+  hasta `20260812000000_color_secundario_sidebar.sql`).
+  - La conexión DIRECTA (`db.rwadambgkqrrvvzzjtxw.supabase.co:5432`) es
+    IPv6-only y no es alcanzable ni desde Docker Desktop ni desde la red de
+    casa del dueño del proyecto -- para correr SQL contra prod hay que usar
+    el **connection pooler**: `postgresql://postgres.rwadambgkqrrvvzzjtxw:[PASSWORD]@aws-0-us-east-1.pooler.supabase.com:5432/postgres`.
+  - Edge Function `plataforma-impersonar` desplegada (`supabase functions
+    deploy`, vinculado con `supabase link --project-ref rwadambgkqrrvvzzjtxw`
+    usando un Personal Access Token de la cuenta, no la CLI login interactiva).
+  - Operador fundador: `vulpexholdinggroup@gmail.com` (creado por API admin
+    de Auth, no por el dashboard -- el botón "Add user" del dashboard le
+    daba error a la usuaria y no se investigó la causa raíz).
+- **Vercel env vars** (Production): `VITE_SUPABASE_URL`,
+  `VITE_SUPABASE_ANON_KEY`, `VITE_VAPID_PUBLIC_KEY`, `VAPID_PUBLIC_KEY`,
+  `VAPID_PRIVATE_KEY`, `VAPID_EMAIL`, `SUPABASE_SERVICE_ROLE_KEY` -- las
+  claves VAPID son nuevas (generadas con `web-push generate-vapid-keys`),
+  el `.env` local todavía tenía un placeholder sin usar.
+- **El `.env` local NO se tocó** -- sigue apuntando al Supabase local de
+  Docker (`http://192.168.1.6:54321` o el que corresponda). Desarrollo local
+  y producción son dos bases de datos completamente separadas a propósito
+  (no se quiere que probar cosas localmente afecte datos de clientes
+  reales). El stack de Docker local se paró (`supabase stop`, con backup de
+  los datos) una vez confirmado que producción funcionaba -- para retomar
+  desarrollo local: `npx supabase start` desde `KALLOS/`.
+- **Pendiente**: dominio propio (hoy es el subdominio `.vercel.app` gratis),
+  decidir si el desarrollo local eventualmente apunta a producción o se
+  mantienen separados con datos de prueba propios.
+
+### Cómo poner esto a andar (si hay que rehacerlo desde cero)
 
 ```bash
 npm install
-git init
 ```
 
-Necesitas un **proyecto de Supabase nuevo** (no el de Yessica Arango) y
-copiar `.env.example` a `.env` con esas credenciales. Corre `supabase/schema.sql`
-completo en el SQL Editor de ese proyecto nuevo para crear el esquema desde
-cero (ya es multi-tenant, incluye `salones` + `salon_id` + RLS por salón).
-Los archivos `migracion_*.sql` sueltos y `crear_superadmin.sql` son
-específicos del proyecto YA EN VIVO de Yessica Arango (single-tenant, sin
-`salon_id`) — no aplican a un proyecto KALLOS nuevo. Para dar de alta el
-primer salón + su superadmin en un proyecto nuevo, usa
-`supabase/crear_salon_superadmin.sql`.
-
-Nota: durante desarrollo local sin un proyecto Supabase real todavía, se
-puede crear un `.env` con valores de relleno (URL/keys falsos) solo para que
-la app renderice (login, landing, estilos) sin que Vite truene por variables
-de entorno faltantes — obviamente nada que dependa de datos reales va a
-funcionar hasta apuntar a un proyecto Supabase real.
-
-Para desplegar: crea un repositorio de GitHub nuevo y un proyecto de Vercel
-nuevo conectado a él (con las mismas env vars: `VITE_SUPABASE_URL`,
-`VITE_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `VAPID_PUBLIC_KEY`,
-`VAPID_PRIVATE_KEY`, `VAPID_EMAIL` — genera un par de claves VAPID nuevo,
-no reuses el de Yessica Arango).
+Para un proyecto Supabase nuevo (no reusar el de producción para pruebas):
+copia `.env.example` a `.env`, corre `supabase/schema.sql` completo en el
+SQL Editor (o por CLI/psql si el proyecto tiene IPv4 -- probar el pooler si
+la conexión directa da "Network unreachable"). Los archivos `migracion_*.sql`
+sueltos y `crear_superadmin.sql` en la raíz de `supabase/` son específicos
+del proyecto original de Yessica Arango (single-tenant, sin `salon_id`) --
+no aplican acá. Para dar de alta el primer salón + su superadmin en un
+proyecto nuevo, usa `supabase/crear_salon_superadmin.sql` o el patrón de
+`crear_operador_plataforma.sql` si es para un operador de plataforma.
 
 ## Convenciones y gotchas aprendidos (aplican también aquí)
 

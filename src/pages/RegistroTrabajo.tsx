@@ -282,6 +282,11 @@ export default function RegistroTrabajoPage() {
                   {nombresDeCita(c).join(', ')}
                   {Number(c.abono) > 0 && <span className="text-brand-500"> · abonó ${Number(c.abono).toLocaleString('es-CO')}</span>}
                 </p>
+                {c.obsequio && (
+                  <p className="text-xs text-brand-700 bg-brand-50 rounded px-2 py-0.5 mt-1">
+                    🎁 Obsequio: {c.obsequio}
+                  </p>
+                )}
                 {c.nota_interna && (
                   <p className="text-xs text-amber-700 bg-amber-50 rounded px-2 py-0.5 mt-1">
                     📌 {c.nota_interna}
@@ -313,6 +318,11 @@ export default function RegistroTrabajoPage() {
                 <> · Abono ya pagado: ${Number(citaSeleccionada.abono).toLocaleString('es-CO')} · Saldo a cobrar: <b>${Math.max(0, totalGeneral - Number(citaSeleccionada.abono)).toLocaleString('es-CO')}</b></>
               )}
             </p>
+            {citaSeleccionada.obsequio && (
+              <p className="text-xs bg-brand-100 rounded px-2 py-1 font-medium">
+                🎁 No olvides el obsequio: {citaSeleccionada.obsequio}
+              </p>
+            )}
 
             <p className="text-xs text-brand-600">
               Al guardar, la cita quedará <b>Completada</b> y el saldo le aparecerá a la

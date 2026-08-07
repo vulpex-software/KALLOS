@@ -12,3 +12,7 @@ tsconfig.tsbuildinfo
 # en esta máquina. Ninguno de los dos debe viajar al repo.
 supabase/.temp/
 supabase/.branches/
+
+.vercel
+.env*
+.claude/schema_apply.log
