@@ -452,11 +452,13 @@ export default function Citas() {
           </div>
         </div>
 
-        {!c.empleada_id && c.estado !== 'cancelada' && (
+        {c.estado !== 'completada' && c.estado !== 'cancelada' && (
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-2">
-            <label className="block text-xs font-medium text-amber-800 mb-1">Asignar profesional</label>
+            <label className="block text-xs font-medium text-amber-800 mb-1">
+              {c.empleada_id ? 'Cambiar profesional' : 'Asignar profesional'}
+            </label>
             <select
-              defaultValue=""
+              value={c.empleada_id ?? ''}
               onChange={(e) => asignarManicurista(c, e.target.value)}
               className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
             >

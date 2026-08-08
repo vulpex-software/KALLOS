@@ -8,6 +8,7 @@ import {
   type Cita,
   type CierreCaja as CierreCajaTipo,
   type Cobro,
+  type Condonacion,
   type CreditoCliente,
   type MetodoPago,
   type Prestamo,
@@ -17,6 +18,17 @@ import {
 
 function pesos(n: number) {
   return '$' + Math.round(n).toLocaleString('es-CO')
+}
+
+// Texto corto de comparación (sin explicar la causa) para el contraste en
+// vivo por medio de pago -- se usa tanto antes de guardar (contra lo que se
+// va escribiendo) como en el reporte ya guardado (contra lo reportado).
+function textoDiferencia(a: number, b: number): { texto: string; clase: string } {
+  const diff = a - b
+  if (Math.abs(diff) <= 1) return { texto: 'coincide ✓', clase: 'text-green-600' }
+  return diff > 0
+    ? { texto: `sobran ${pesos(diff)}`, clase: 'text-amber-600' }
+    : { texto: `faltan ${pesos(-diff)}`, clase: 'text-amber-600' }
 }
 
 interface CierreConAdmin extends CierreCajaTipo {
@@ -52,6 +64,52 @@ export default function CierreCaja() {
   // Prestado pendiente TOTAL (como la Base: siempre visible, sin importar la fecha)
   const [prestamosPendientes, setPrestamosPendientes] = useState<Prestamo[]>([])
   const [pagosPrestamoTodos, setPagosPrestamoTodos] = useState<PrestamoPago[]>([])
+
+  // Desglose de lo trabajado HOY: cobrado/pendiente/eliminado por visita,
+  // sin importar en qué día se registró el cobro/condonación (a diferencia
+  // de "Cobrado del día por medio de pago", que es de dinero que entró hoy
+  // sin importar de qué visita). Mismo patrón de agrupar por visita_id que
+  // Cuentas por cobrar.
+  const [resumenVisitasHoy, setResumenVisitasHoy] = useState({ cobrado: 0, pendiente: 0, condonado: 0 })
+
+  useEffect(() => {
+    async function calcular() {
+      if (trabajos.length === 0) {
+        setResumenVisitasHoy({ cobrado: 0, pendiente: 0, condonado: 0 })
+        return
+      }
+      const grupos = new Map<string, RegistroTrabajo[]>()
+      for (const r of trabajos) {
+        const clave = r.visita_id ?? r.id
+        grupos.set(clave, [...(grupos.get(clave) ?? []), r])
+      }
+      const visitaIds = [...grupos.keys()]
+      const citaIds = [...new Set(trabajos.map((r) => r.cita_id).filter(Boolean))] as string[]
+
+      const [{ data: cobrosData }, { data: citasData }, { data: condonacionesData }] = await Promise.all([
+        supabase.from('cobros').select('*').in('visita_id', visitaIds),
+        citaIds.length > 0 ? supabase.from('citas').select('*').in('id', citaIds) : Promise.resolve({ data: [] as Cita[] }),
+        supabase.from('condonaciones').select('*').in('visita_id', visitaIds)
+      ])
+      const cobrosPorVisita = (cobrosData as Cobro[]) ?? []
+      const citasPorId = (citasData as Cita[]) ?? []
+      const condonacionesPorVisita = (condonacionesData as Condonacion[]) ?? []
+
+      let cobrado = 0, pendiente = 0, condonado = 0
+      for (const [visitaId, regs] of grupos) {
+        const total = regs.reduce((s, r) => s + Number(r.precio_cobrado), 0)
+        const cita = citasPorId.find((c) => c.id === regs[0].cita_id)
+        const abono = cita ? Number(cita.abono) : 0
+        const cobradoVisita = cobrosPorVisita.filter((c) => c.visita_id === visitaId).reduce((s, c) => s + Number(c.monto), 0)
+        const condonadoVisita = condonacionesPorVisita.filter((c) => c.visita_id === visitaId).reduce((s, c) => s + Number(c.monto), 0)
+        cobrado += cobradoVisita
+        condonado += condonadoVisita
+        pendiente += Math.max(0, total - abono - cobradoVisita - condonadoVisita)
+      }
+      setResumenVisitasHoy({ cobrado, pendiente, condonado })
+    }
+    calcular()
+  }, [trabajos])
 
   useEffect(() => {
     const { desde, hasta } = rangoDiaUTC(fecha)
@@ -140,6 +198,32 @@ export default function CierreCaja() {
   }
   const totalReembolsadoHoy = reembolsosHoy.reduce((s, r) => s + Number(r.monto), 0)
 
+  // Esperado por medio de pago ANTES de guardar (Cambio 4): lo cobrado hoy
+  // en ese medio, más lo que entró/salió hoy por préstamos y reembolsos, y
+  // menos el pago a proveedores si fue en ese medio -- para contrastar en
+  // vivo contra lo que se va escribiendo en el formulario.
+  const proveedorMontoNum = Number(proveedorMonto || 0)
+  const esperadoPorMetodo: Record<MetodoPago, number> = { efectivo: 0, nequi: 0, daviplata: 0, datafono: 0 }
+  for (const m of METODOS_PAGO) {
+    esperadoPorMetodo[m.valor] =
+      porMetodo[m.valor]
+      + pagoPrestamoHoyPorMetodo[m.valor]
+      - prestadoHoyPorMetodo[m.valor]
+      - reembolsadoHoyPorMetodo[m.valor]
+      - (proveedorMetodo === m.valor ? proveedorMontoNum : 0)
+  }
+
+  // Reportado ya guardado por medio, sumando TODOS los cierres de esta
+  // fecha (Cambio 5) -- comparado contra lo cobrado simple del día (sin
+  // restar salidas, a diferencia del esperado de arriba).
+  const reportadoPorMetodo: Record<MetodoPago, number> = { efectivo: 0, nequi: 0, daviplata: 0, datafono: 0 }
+  for (const c of cierresDelDia) {
+    reportadoPorMetodo.efectivo += Number(c.efectivo_entregado)
+    reportadoPorMetodo.nequi += Number(c.nequi_reportado)
+    reportadoPorMetodo.daviplata += Number(c.daviplata_reportado)
+    reportadoPorMetodo.datafono += Number(c.datafono_reportado)
+  }
+
   // Prestado pendiente total (persistente, como la Base).
   const totalPrestadoPendiente = useMemo(() => {
     const pagadoPorPrestamo = new Map<string, number>()
@@ -208,6 +292,17 @@ export default function CierreCaja() {
     }
   }
 
+  // Cambio 4: contraste en vivo bajo cada input, contra lo que se va
+  // escribiendo -- antes de guardar, no después.
+  function contrasteInline(escritoStr: string, esperado: number) {
+    const base = `esperado ${pesos(esperado)}`
+    if (escritoStr.trim() === '') return <p className="text-[11px] text-gray-400 mt-0.5">{base}</p>
+    const escrito = Number(escritoStr || 0)
+    const diff = textoDiferencia(escrito, esperado)
+    const extra = diff.texto === 'coincide ✓' ? '· coincide ✓' : `· escribiste ${pesos(escrito)} → ${diff.texto}`
+    return <p className={`text-[11px] mt-0.5 ${diff.clase}`}>{base} {extra}</p>
+  }
+
   return (
     <div className="max-w-lg mx-auto p-4 space-y-4">
       <div className="flex items-center justify-between">
@@ -233,6 +328,13 @@ export default function CierreCaja() {
           <h2 className="text-sm font-semibold text-gray-600">Trabajos completados del día</h2>
           <span className="text-sm font-semibold text-brand-700">Total: {pesos(totalTrabajos)}</span>
         </div>
+        {trabajos.length > 0 && (
+          <p className="text-xs text-gray-500 mb-2">
+            Cobrado {pesos(resumenVisitasHoy.cobrado)}
+            {resumenVisitasHoy.pendiente > 0 && <> · pendiente {pesos(resumenVisitasHoy.pendiente)}</>}
+            {resumenVisitasHoy.condonado > 0 && <> · eliminado {pesos(resumenVisitasHoy.condonado)}</>}
+          </p>
+        )}
         <ul className="space-y-1 max-h-56 overflow-y-auto">
           {trabajos.map((t) => (
             <li key={t.id} className="flex justify-between text-sm border-b border-gray-50 pb-1">
@@ -315,7 +417,7 @@ export default function CierreCaja() {
         </div>
       )}
 
-      {esSuperadmin ? (
+      {esSuperadmin && (
         <div className="bg-white rounded-2xl shadow p-4 space-y-3">
           <h2 className="text-sm font-semibold text-gray-600">Reporte del día</h2>
           {cierresDelDia.length === 0 ? (
@@ -323,7 +425,11 @@ export default function CierreCaja() {
               Aún no se ha hecho el cierre de caja de este día.
             </p>
           ) : (
-            cierresDelDia.map((c) => (
+            <>
+            {cierresDelDia.length > 1 && (
+              <p className="text-xs text-gray-400">Hay {cierresDelDia.length} cierres guardados este día — se suman todos en la comparación de abajo.</p>
+            )}
+            {cierresDelDia.map((c) => (
               <div key={c.id} className="border border-gray-100 rounded-xl p-3 space-y-2">
                 <p className="text-xs text-gray-400">Cerrado por {c.administradora?.nombre ?? 'admin'}</p>
                 <div className="grid grid-cols-3 gap-2 text-center">
@@ -371,11 +477,36 @@ export default function CierreCaja() {
                   Cierre registrado correctamente ✓
                 </p>
               </div>
-            ))
+            ))}
+
+            {/* Cambio 5: desfase por medio de pago, sumando todos los cierres del día */}
+            <div className="border-t border-gray-100 pt-2 space-y-1">
+              {METODOS_PAGO.some((m) => Math.abs(reportadoPorMetodo[m.valor] - porMetodo[m.valor]) > 1) ? (
+                METODOS_PAGO.map((m) => {
+                  const diff = textoDiferencia(reportadoPorMetodo[m.valor], porMetodo[m.valor])
+                  if (diff.texto === 'coincide ✓') return null
+                  return (
+                    <p key={m.valor} className={`text-xs ${diff.clase}`}>
+                      {m.etiqueta}: reportado {pesos(reportadoPorMetodo[m.valor])}, esperado {pesos(porMetodo[m.valor])} → {diff.texto}
+                    </p>
+                  )
+                })
+              ) : (
+                <p className="text-xs text-green-600">Todos los medios coinciden con lo cobrado del día ✓</p>
+              )}
+            </div>
+            </>
           )}
         </div>
-      ) : (
-        <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow p-4 space-y-4">
+      )}
+
+      {esSuperadmin && (
+        <p className="text-xs text-gray-400 -mt-2">
+          Como dueña también puedes registrar tu propio cierre abajo (de este día o de una fecha atrasada, cambiando el selector de arriba) — por ejemplo si tomaste la caja tú misma, o para corregir uno mal hecho. Queda como un registro nuevo aparte; el original no se edita ni se borra.
+        </p>
+      )}
+
+      <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow p-4 space-y-4">
           {error && <div className="text-sm bg-red-50 text-red-700 border border-red-200 rounded-lg p-2">{error}</div>}
           {mensaje && <div className="text-sm bg-green-50 text-green-700 border border-green-200 rounded-lg p-2">{mensaje}</div>}
 
@@ -399,6 +530,7 @@ export default function CierreCaja() {
                 onChange={(e) => setEfectivo(soloDigitos(e.target.value))}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2"
               />
+              {contrasteInline(efectivo, esperadoPorMetodo.efectivo)}
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">Nequi</label>
@@ -408,6 +540,7 @@ export default function CierreCaja() {
                 onChange={(e) => setNequi(soloDigitos(e.target.value))}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2"
               />
+              {contrasteInline(nequi, esperadoPorMetodo.nequi)}
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">Daviplata</label>
@@ -417,6 +550,7 @@ export default function CierreCaja() {
                 onChange={(e) => setDaviplata(soloDigitos(e.target.value))}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2"
               />
+              {contrasteInline(daviplata, esperadoPorMetodo.daviplata)}
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">Datáfono</label>
@@ -426,6 +560,7 @@ export default function CierreCaja() {
                 onChange={(e) => setDatafono(soloDigitos(e.target.value))}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2"
               />
+              {contrasteInline(datafono, esperadoPorMetodo.datafono)}
             </div>
           </div>
 
@@ -507,8 +642,7 @@ export default function CierreCaja() {
           >
             {guardando ? 'Guardando…' : 'Guardar cierre de caja'}
           </button>
-        </form>
-      )}
+      </form>
     </div>
   )
 }
