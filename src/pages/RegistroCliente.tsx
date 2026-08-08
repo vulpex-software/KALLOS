@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { DOMINIO_INTERNO } from '../lib/authDominio'
 import { logoParaSalon } from '../lib/branding'
@@ -7,6 +7,18 @@ import type { Salon } from '../types'
 
 export default function RegistroCliente() {
   const { salonSlug } = useParams<{ salonSlug?: string }>()
+  const navigate = useNavigate()
+
+  // Esta página es pública -- cualquiera puede llegar aquí con OTRA sesión
+  // ya guardada en el navegador (una operadora probando, un computador
+  // compartido). Si no cerramos esa sesión antes de ir a /login, esa
+  // pantalla ve que ya hay sesión y rebota directo al inicio de ESA cuenta
+  // en vez de mostrar el formulario -- confuso para quien solo quería
+  // entrar con la suya. Ver también CrearSalon.tsx (mismo patrón).
+  async function irALogin() {
+    await supabase.auth.signOut()
+    navigate('/login')
+  }
   const [salon, setSalon] = useState<Salon | null>(null)
   const [buscandoSalon, setBuscandoSalon] = useState(!!salonSlug)
   const [nombre, setNombre] = useState('')
@@ -110,7 +122,7 @@ export default function RegistroCliente() {
         <div className="w-full max-w-sm bg-white rounded-2xl shadow p-6 text-center space-y-3">
           <p className="text-brand-700 font-semibold">¡Cuenta creada!</p>
           <p className="text-sm text-gray-500">Ya puedes iniciar sesión con tu <b>cédula</b> como usuario y como contraseña.</p>
-          <Link to="/login" className="inline-block bg-brand-600 text-white rounded-lg px-4 py-2 text-sm font-medium">Iniciar sesión</Link>
+          <button onClick={irALogin} className="inline-block bg-brand-600 text-white rounded-lg px-4 py-2 text-sm font-medium">Iniciar sesión</button>
         </div>
       </div>
     )
@@ -154,7 +166,7 @@ export default function RegistroCliente() {
 
         <p className="text-center text-sm text-gray-500">
           ¿Ya tienes cuenta?{' '}
-          <Link to="/login" className="text-brand-600 font-medium">Inicia sesión con tu cédula</Link>
+          <button type="button" onClick={irALogin} className="text-brand-600 font-medium">Inicia sesión con tu cédula</button>
         </p>
         <p className="text-center text-[11px] text-gray-300">Developed by Vulpex Software SAS</p>
       </form>

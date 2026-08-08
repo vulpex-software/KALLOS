@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { normalizarCorreoOUsuario } from '../lib/authDominio'
 import { generarSlug } from '../lib/slug'
@@ -11,6 +11,16 @@ import { generarSlug } from '../lib/slug'
 // ningún paso de promoción acá.
 export default function CrearSalon() {
   const navigate = useNavigate()
+
+  // Página pública -- si el navegador ya tiene OTRA sesión guardada (una
+  // operadora probando, un computador compartido), hay que cerrarla antes
+  // de ir a /login o esa pantalla rebota directo al inicio de esa otra
+  // cuenta en vez de mostrar el formulario. Ver también RegistroCliente.tsx.
+  async function irALogin() {
+    await supabase.auth.signOut()
+    navigate('/login')
+  }
+
   const [nombreSalon, setNombreSalon] = useState('')
   const [slug, setSlug] = useState('')
   const [slugTocado, setSlugTocado] = useState(false)
@@ -82,9 +92,9 @@ export default function CrearSalon() {
           <p className="text-sm text-gray-400">
             {nombreSalon} ya está activo en KALLOS. Puedes iniciar sesión con el usuario y la contraseña que elegiste.
           </p>
-          <Link to="/login" className="inline-block bg-brand-500 hover:bg-brand-600 text-ink rounded-lg px-4 py-2 text-sm font-semibold">
+          <button onClick={irALogin} className="inline-block bg-brand-500 hover:bg-brand-600 text-ink rounded-lg px-4 py-2 text-sm font-semibold">
             Iniciar sesión
-          </Link>
+          </button>
         </div>
       </div>
     )
@@ -140,7 +150,7 @@ export default function CrearSalon() {
         </button>
 
         <p className="text-center text-sm text-gray-400">
-          ¿Ya tienes cuenta? <Link to="/login" className="text-brand-400 font-medium">Inicia sesión</Link>
+          ¿Ya tienes cuenta? <button type="button" onClick={irALogin} className="text-brand-400 font-medium">Inicia sesión</button>
         </p>
         <p className="text-center text-[11px] text-gray-600">Developed by Vulpex Software SAS</p>
       </form>
