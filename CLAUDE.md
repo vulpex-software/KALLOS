@@ -346,6 +346,33 @@ KALLOS ya está desplegado de verdad, no es solo un plan:
   - Operador fundador: `vulpexholdinggroup@gmail.com` (creado por API admin
     de Auth, no por el dashboard -- el botón "Add user" del dashboard le
     daba error a la usuaria y no se investigó la causa raíz).
+  - **CRÍTICO, ya corregido (2026-08-08): `mailer_autoconfirm` estaba en
+    `false`** (default de un proyecto Supabase Cloud nuevo). Toda la app
+    depende de correos SINTÉTICOS que nadie puede confirmar de verdad --
+    `usuario@cuentas.kallos.app` (staff/dueña con "usuario corto", ver
+    `authDominio.ts`) y `cedula@cuentas.kallos.app` (clientas, ver
+    `RegistroCliente.tsx`). Con confirmación de correo exigida, CUALQUIER
+    cuenta creada por self-serve (`/crear-salon`), por la Consola
+    ("Vender / crear salón") o por una clienta (`/registro-cliente/<slug>`)
+    quedaba con sesión válida un instante pero **nunca podía volver a
+    iniciar sesión** -- Login.tsx solo muestra "Usuario o contraseña
+    incorrectos" para cualquier error, así que se veía exactamente como una
+    contraseña mal guardada (por eso la confusión inicial). Se corrigió con
+    la Management API: `PATCH /v1/projects/{ref}/config/auth
+    {"mailer_autoconfirm": true}` (requiere el Personal Access Token, no las
+    API keys del proyecto). Las cuentas que ya habían quedado atascadas se
+    confirmaron a mano una por una (`PUT .../admin/users/{id}
+    {"email_confirm": true}`) -- si aparece alguna cuenta vieja que "no
+    recuerda su contraseña" y es de antes de esta fecha, probablemente es
+    este mismo problema, no una contraseña real mal escrita.
+  - **Otro hallazgo, no corregido**: en `/registro-cliente/<slug>`, el link
+    "¿Ya tienes cuenta? Inicia sesión" antes solo navegaba a `/login` -- si
+    el navegador ya tenía OTRA sesión guardada (una operadora probando, un
+    computador compartido), `/login` la veía activa y rebotaba directo a
+    esa cuenta en vez de mostrar el formulario. Corregido en
+    `RegistroCliente.tsx` y `CrearSalon.tsx`: ese botón ahora hace
+    `signOut()` antes de navegar a `/login` (mismo patrón que
+    `salirDeImpersonar` en `Layout.tsx`).
 - **Vercel env vars** (Production): `VITE_SUPABASE_URL`,
   `VITE_SUPABASE_ANON_KEY`, `VITE_VAPID_PUBLIC_KEY`, `VAPID_PUBLIC_KEY`,
   `VAPID_PRIVATE_KEY`, `VAPID_EMAIL`, `SUPABASE_SERVICE_ROLE_KEY` -- las
