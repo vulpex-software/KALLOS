@@ -5,6 +5,13 @@ import { DOMINIO_INTERNO } from '../lib/authDominio'
 import { logoParaSalon } from '../lib/branding'
 import type { Salon } from '../types'
 
+// Lo mínimo para listar salones en el buscador (sin slug en la URL).
+interface SalonBasico {
+  id: string
+  nombre: string
+  slug: string
+}
+
 export default function RegistroCliente() {
   const { salonSlug } = useParams<{ salonSlug?: string }>()
   const navigate = useNavigate()
@@ -21,6 +28,12 @@ export default function RegistroCliente() {
   }
   const [salon, setSalon] = useState<Salon | null>(null)
   const [buscandoSalon, setBuscandoSalon] = useState(!!salonSlug)
+  // Cuando no llega un slug en la URL (ej. desde el link genérico de
+  // Login), no sabemos a qué salón pertenece la clienta -- se le deja
+  // buscar el suyo por nombre en vez de dejarla en un callejón sin salida.
+  const [salones, setSalones] = useState<SalonBasico[]>([])
+  const [cargandoSalones, setCargandoSalones] = useState(false)
+  const [busquedaSalon, setBusquedaSalon] = useState('')
   const [nombre, setNombre] = useState('')
   const [cedula, setCedula] = useState('')
   const [telefono, setTelefono] = useState('')
@@ -31,7 +44,22 @@ export default function RegistroCliente() {
   useEffect(() => {
     if (!salonSlug) {
       setBuscandoSalon(false)
-      return
+      let cancelado = false
+      setCargandoSalones(true)
+      supabase
+        .from('salones')
+        .select('id, nombre, slug')
+        .eq('activo', true)
+        .order('nombre')
+        .then(({ data }) => {
+          if (!cancelado) {
+            setSalones((data as SalonBasico[]) ?? [])
+            setCargandoSalones(false)
+          }
+        })
+      return () => {
+        cancelado = true
+      }
     }
     let cancelado = false
     setBuscandoSalon(true)
@@ -91,7 +119,7 @@ export default function RegistroCliente() {
     return <div className="min-h-screen flex items-center justify-center text-gray-400 text-sm">Cargando…</div>
   }
 
-  if (!salon) {
+  if (!salon && salonSlug) {
     return (
       <div className="min-h-screen flex items-center justify-center px-4">
         <div className="w-full max-w-sm bg-white rounded-2xl shadow p-6 text-center space-y-3">
@@ -99,6 +127,59 @@ export default function RegistroCliente() {
           <p className="text-sm text-gray-500">
             Este link de registro no corresponde a ningún salón activo. Pídele a tu salón que te comparta su link de registro correcto.
           </p>
+        </div>
+      </div>
+    )
+  }
+
+  // Sin slug en la URL: se le deja buscar su salón por nombre y registrarse
+  // ella sola, igual que antes -- solo que ahora primero elige a cuál.
+  if (!salon) {
+    const salonesFiltrados = salones.filter((s) =>
+      s.nombre.toLowerCase().includes(busquedaSalon.trim().toLowerCase())
+    )
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4 py-8">
+        <div className="w-full max-w-sm bg-white rounded-2xl shadow p-6 space-y-4">
+          <div className="text-center">
+            <img src="/logo.png" alt="KALLOS" className="w-16 h-16 mx-auto object-contain" />
+            <h1 className="text-lg font-semibold text-brand-700 mt-2">¿En qué salón quieres registrarte?</h1>
+            <p className="text-sm text-gray-500">Busca el nombre de tu salón para crear tu cuenta.</p>
+          </div>
+
+          <input
+            type="text"
+            autoFocus
+            value={busquedaSalon}
+            onChange={(e) => setBusquedaSalon(e.target.value)}
+            placeholder="Nombre del salón…"
+            className="w-full rounded-lg border border-gray-300 px-3 py-2"
+          />
+
+          <ul className="divide-y divide-gray-100 max-h-72 overflow-y-auto">
+            {salonesFiltrados.map((s) => (
+              <li key={s.id}>
+                <button
+                  type="button"
+                  onClick={() => navigate(`/registro-cliente/${s.slug}`)}
+                  className="w-full text-left px-2 py-2.5 text-sm font-medium hover:bg-gray-50 rounded-lg"
+                >
+                  {s.nombre}
+                </button>
+              </li>
+            ))}
+            {salonesFiltrados.length === 0 && (
+              <li className="text-sm text-gray-400 text-center py-4">
+                {cargandoSalones ? 'Cargando…' : busquedaSalon ? 'No encontramos ese salón.' : 'No hay salones disponibles.'}
+              </li>
+            )}
+          </ul>
+
+          <p className="text-center text-sm text-gray-500">
+            ¿Ya tienes cuenta?{' '}
+            <button type="button" onClick={irALogin} className="text-brand-600 font-medium">Inicia sesión con tu cédula</button>
+          </p>
+          <p className="text-center text-[11px] text-gray-300">Developed by Vulpex Software SAS</p>
         </div>
       </div>
     )
