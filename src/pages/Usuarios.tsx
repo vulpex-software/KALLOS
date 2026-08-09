@@ -28,6 +28,12 @@ export default function Usuarios() {
   const [error, setError] = useState<string | null>(null)
   const [mensaje, setMensaje] = useState<string | null>(null)
 
+  // Feedback de acciones sobre una fila (borrar cuenta) -- separado del
+  // error/mensaje de arriba porque ese vive DENTRO del form colapsable de
+  // "Crear usuario" y no se ve si el form está cerrado.
+  const [accionError, setAccionError] = useState<string | null>(null)
+  const [accionMensaje, setAccionMensaje] = useState<string | null>(null)
+
   async function cargar() {
     const { data } = await supabase.from('profiles').select('*').order('nombre')
     setPerfiles((data as Profile[]) ?? [])
@@ -206,6 +212,25 @@ export default function Usuarios() {
     setNuevaPassword('')
   }
 
+  // Borrar una cuenta de clienta -- personal se queda solo con "Sin acceso"
+  // (ver nota en la migración: borrar staff perdería de vista quién hizo
+  // qué en el historial ya registrado).
+  async function borrarCliente(p: Profile) {
+    if (!confirm(`¿Borrar la cuenta de ${p.nombre}? Esta acción no se puede deshacer.`)) return
+    setAccionError(null); setAccionMensaje(null)
+    const { error } = await supabase.rpc('admin_eliminar_cliente', { p_user_id: p.id })
+    if (error) {
+      setAccionError(
+        error.message.toLowerCase().includes('foreign key') || error.message.toLowerCase().includes('violat')
+          ? `No se puede borrar a ${p.nombre}: ya tiene citas o créditos registrados. Puedes quitarle el acceso en su lugar.`
+          : 'No se pudo borrar: ' + error.message
+      )
+      return
+    }
+    setAccionMensaje(`Cuenta de ${p.nombre} eliminada.`)
+    cargar()
+  }
+
   const esPersonal = (r: Rol) => r === 'superadmin' || r === 'admin' || r === 'personal'
   const conteoPersonal = perfiles.filter((p) => esPersonal(p.rol)).length
   const conteoClientes = perfiles.filter((p) => p.rol === 'cliente').length
@@ -231,6 +256,9 @@ export default function Usuarios() {
           {mostrarAlta ? 'Cerrar' : '+ Crear usuario'}
         </button>
       </div>
+
+      {accionError && <div className="text-sm bg-red-50 text-red-700 border border-red-200 rounded-lg p-2">{accionError}</div>}
+      {accionMensaje && <div className="text-sm bg-green-50 text-green-700 border border-green-200 rounded-lg p-2">{accionMensaje}</div>}
 
       {mostrarAlta && (
         <form onSubmit={crearUsuario} className="bg-white rounded-2xl shadow p-4 space-y-3">
@@ -372,17 +400,20 @@ export default function Usuarios() {
 
             <div className="pt-1 border-t border-gray-50 space-y-2">
               <div className="flex flex-wrap gap-3">
-                {p.rol !== 'cliente' && (
-                  <button onClick={() => abrirDatos(p)} className="text-xs text-brand-600 font-medium">
-                    {editandoId === p.id ? 'Cerrar datos ▲' : 'Datos básicos ▾'}
-                  </button>
-                )}
+                <button onClick={() => abrirDatos(p)} className="text-xs text-brand-600 font-medium">
+                  {editandoId === p.id ? 'Cerrar datos ▲' : 'Datos básicos ▾'}
+                </button>
                 <button onClick={() => abrirAcceso(p)} className="text-xs text-brand-600 font-medium">
                   {accesoId === p.id ? 'Cerrar acceso ▲' : 'Usuario / contraseña ▾'}
                 </button>
+                {p.rol === 'cliente' && (
+                  <button onClick={() => borrarCliente(p)} className="text-xs text-red-500 font-medium">
+                    Borrar cuenta
+                  </button>
+                )}
               </div>
 
-              {editandoId === p.id && p.rol !== 'cliente' && (
+              {editandoId === p.id && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {datosError && <div className="sm:col-span-2 text-xs bg-red-50 text-red-700 border border-red-200 rounded-lg p-2">{datosError}</div>}
                   <input placeholder="Nombre" value={datos.nombre ?? ''} onChange={(e) => setDatos((d) => ({ ...d, nombre: e.target.value }))} className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm sm:col-span-2" />

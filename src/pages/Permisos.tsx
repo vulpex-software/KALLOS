@@ -82,9 +82,34 @@ export default function Permisos() {
     cargar()
   }
 
+  // Quién está de permiso/descanso HOY -- separado del formulario de
+  // solicitar/registrar y de la lista completa de abajo, para que admin
+  // (no solo la dueña que los aprueba) vea de un vistazo quién falta hoy,
+  // sin importar quién haya registrado ese permiso.
+  const hoy = fechaHoy()
+  const dePermisoHoy = permisos.filter(
+    (p) => p.estado === 'aprobado' && p.fecha_desde <= hoy && p.fecha_hasta >= hoy
+  )
+
   return (
     <div className="max-w-2xl mx-auto p-4 space-y-6">
       <h1 className="text-lg font-semibold">Permisos y descansos</h1>
+
+      {esGestor && dePermisoHoy.length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
+          <h2 className="text-sm font-semibold text-amber-800 mb-2">De permiso/descanso hoy</h2>
+          <ul className="space-y-1">
+            {dePermisoHoy.map((p) => (
+              <li key={p.id} className="text-sm text-amber-800">
+                <b>{p.persona?.nombre}</b> — {p.tipo === 'descanso' ? 'Descanso' : 'Permiso'}
+                {p.hora_desde
+                  ? ` · ${p.hora_desde.slice(0, 5)}${p.hora_hasta ? ' a ' + p.hora_hasta.slice(0, 5) : ''}`
+                  : ' (todo el día)'}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <form onSubmit={solicitar} className="bg-white rounded-2xl shadow p-4 space-y-3">
         <h2 className="text-sm font-semibold text-gray-600">
