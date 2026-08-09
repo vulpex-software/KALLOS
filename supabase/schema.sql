@@ -1329,7 +1329,6 @@ as $$
 declare
   v_email text;
   v_salon_objetivo uuid;
-  v_dominio text;
 begin
   if not public.es_super() then
     raise exception 'Solo la dueña puede cambiar el acceso de un usuario.';
@@ -1343,8 +1342,12 @@ begin
   if p_nuevo_usuario is not null and length(trim(p_nuevo_usuario)) > 0 then
     v_email := lower(trim(p_nuevo_usuario));
     if position('@' in v_email) = 0 then
-      select dominio_interno into v_dominio from public.salones where id = v_salon_objetivo;
-      v_email := v_email || '@' || v_dominio;
+      -- Mismo dominio compartido que resuelve el login para un "usuario
+      -- corto" (ver DOMINIO_INTERNO en src/lib/authDominio.ts) -- antes se
+      -- usaba salones.dominio_interno (POR salón), que no coincide con lo
+      -- que Login.tsx realmente resuelve, dejando a la cuenta sin poder
+      -- volver a entrar con el usuario corto recién puesto.
+      v_email := v_email || '@cuentas.kallos.app';
     end if;
     update auth.users set email = v_email where id = p_user_id;
   end if;

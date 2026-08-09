@@ -207,7 +207,11 @@ export default function Usuarios() {
       )
       return
     }
-    setAccesoMensaje('Acceso actualizado. Avísale a la persona su nuevo usuario/contraseña.')
+    setAccesoMensaje(
+      'Acceso actualizado.' +
+        (nuevoUsuario.trim() ? ` Su usuario para entrar es exactamente: ${nuevoUsuario.trim()}.` : '') +
+        ' Avísale a la persona su nuevo usuario/contraseña.'
+    )
     setNuevoUsuario('')
     setNuevaPassword('')
   }
