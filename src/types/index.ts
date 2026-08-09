@@ -25,13 +25,14 @@ export const ESPECIALIDADES: { valor: Especialidad; etiqueta: string }[] = [
   { valor: 'lashista', etiqueta: 'Lashista' }
 ]
 
-export type MetodoPago = 'efectivo' | 'nequi' | 'daviplata' | 'datafono'
+export type MetodoPago = 'efectivo' | 'nequi' | 'daviplata' | 'datafono' | 'bre_b'
 
 export const METODOS_PAGO: { valor: MetodoPago; etiqueta: string }[] = [
   { valor: 'efectivo', etiqueta: 'Efectivo' },
   { valor: 'nequi', etiqueta: 'Nequi' },
   { valor: 'daviplata', etiqueta: 'Daviplata' },
-  { valor: 'datafono', etiqueta: 'Datáfono' }
+  { valor: 'datafono', etiqueta: 'Datáfono' },
+  { valor: 'bre_b', etiqueta: 'Bre-B' }
 ]
 
 export interface Profile {
@@ -222,6 +223,7 @@ export interface CierreCaja {
   nequi_reportado: number
   daviplata_reportado: number
   datafono_reportado: number
+  bre_b_reportado: number
   proveedor_monto: number
   proveedor_metodo_pago: MetodoPago | null
   proveedor_nota: string | null

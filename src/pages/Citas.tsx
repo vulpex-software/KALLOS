@@ -35,6 +35,7 @@ export default function Citas() {
   const location = useLocation()
   const navigate = useNavigate()
   const [fecha, setFecha] = useState(hoy())
+  const [vistaAgenda, setVistaAgenda] = useState<'estado' | 'profesional'>('estado')
   const [citas, setCitas] = useState<Cita[]>([])
   const [servicios, setServicios] = useState<Servicio[]>([])
   const [empleadas, setEmpleadas] = useState<Profile[]>([])
@@ -117,6 +118,26 @@ export default function Citas() {
     supabase.from('obsequios').select('*').eq('activo', true).order('nombre')
       .then(({ data }) => setObsequios((data as Obsequio[]) ?? []))
   }, [])
+
+  // Agenda agrupada por profesional (Cambio 1): en vez de por estado, para
+  // ver de un vistazo qué turnos tiene libre/ocupados cada una. Los grupos
+  // siguen el mismo orden que la lista de empleadas; "Sin asignar" al final.
+  const citasPorProfesional = useMemo(() => {
+    const grupos = new Map<string, Cita[]>()
+    for (const c of citas) {
+      const clave = c.empleada_id ?? 'sin-asignar'
+      grupos.set(clave, [...(grupos.get(clave) ?? []), c])
+    }
+    for (const lista of grupos.values()) lista.sort((a, b) => a.hora.localeCompare(b.hora))
+    const ordenadas: { id: string; nombre: string; citas: Cita[] }[] = []
+    for (const e of empleadas) {
+      const lista = grupos.get(e.id)
+      if (lista) ordenadas.push({ id: e.id, nombre: e.nombre, citas: lista })
+    }
+    const sinAsignar = grupos.get('sin-asignar')
+    if (sinAsignar) ordenadas.push({ id: 'sin-asignar', nombre: 'Sin asignar', citas: sinAsignar })
+    return ordenadas
+  }, [citas, empleadas])
 
   const porCategoria = useMemo(() => {
     const mapa = new Map<string, Servicio[]>()
@@ -747,18 +768,46 @@ export default function Citas() {
         <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm" />
       </div>
 
-      {ORDEN_ESTADOS.map((est) => {
-        const grupo = citas.filter((c) => c.estado === est)
-        if (grupo.length === 0) return null
-        return (
-          <div key={est} className="space-y-2">
-            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{ETIQUETA_ESTADO[est]} ({grupo.length})</h3>
+      <div className="flex gap-1 bg-gray-100 rounded-xl p-1 max-w-xs">
+        <button
+          type="button"
+          onClick={() => setVistaAgenda('estado')}
+          className={`flex-1 text-xs font-medium rounded-lg py-1.5 transition ${vistaAgenda === 'estado' ? 'bg-white shadow text-brand-700' : 'text-gray-500'}`}
+        >
+          Por estado
+        </button>
+        <button
+          type="button"
+          onClick={() => setVistaAgenda('profesional')}
+          className={`flex-1 text-xs font-medium rounded-lg py-1.5 transition ${vistaAgenda === 'profesional' ? 'bg-white shadow text-brand-700' : 'text-gray-500'}`}
+        >
+          Por profesional
+        </button>
+      </div>
+
+      {vistaAgenda === 'estado' ? (
+        ORDEN_ESTADOS.map((est) => {
+          const grupo = citas.filter((c) => c.estado === est)
+          if (grupo.length === 0) return null
+          return (
+            <div key={est} className="space-y-2">
+              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{ETIQUETA_ESTADO[est]} ({grupo.length})</h3>
+              <ul className="space-y-3">
+                {grupo.map((c) => renderCita(c))}
+              </ul>
+            </div>
+          )
+        })
+      ) : (
+        citasPorProfesional.map((grupo) => (
+          <div key={grupo.id} className="space-y-2">
+            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{grupo.nombre} ({grupo.citas.length})</h3>
             <ul className="space-y-3">
-              {grupo.map((c) => renderCita(c))}
+              {grupo.citas.map((c) => renderCita(c))}
             </ul>
           </div>
-        )
-      })}
+        ))
+      )}
       {citas.length === 0 && <p className="text-sm text-gray-400">No hay citas agendadas este día.</p>}
 
       {confirmando && (

@@ -44,6 +44,7 @@ export default function CierreCaja() {
   const [nequi, setNequi] = useState('')
   const [daviplata, setDaviplata] = useState('')
   const [datafono, setDatafono] = useState('')
+  const [breB, setBreB] = useState('')
   const [proveedorMonto, setProveedorMonto] = useState('')
   const [proveedorMetodo, setProveedorMetodo] = useState('')
   const [proveedorNota, setProveedorNota] = useState('')
@@ -69,15 +70,26 @@ export default function CierreCaja() {
   // sin importar en qué día se registró el cobro/condonación (a diferencia
   // de "Cobrado del día por medio de pago", que es de dinero que entró hoy
   // sin importar de qué visita). Mismo patrón de agrupar por visita_id que
-  // Cuentas por cobrar.
-  const [resumenVisitasHoy, setResumenVisitasHoy] = useState({ cobrado: 0, pendiente: 0, condonado: 0 })
+  // Cuentas por cobrar. Cambio 4: además separa cuánto de ese "cobrado" es
+  // en realidad abono/cobro de OTRO día (el abono se paga al crear la
+  // cita, así que su fecha es el created_at de la cita, no la del servicio),
+  // con detalle por clienta para poder distinguir un abono legítimo de un
+  // error de registro caso por caso.
+  const [resumenVisitasHoy, setResumenVisitasHoy] = useState<{
+    cobrado: number
+    pendiente: number
+    condonado: number
+    cobradoOtroDia: number
+    detalleCobradoOtroDia: { clienteNombre: string; monto: number; detalle: string }[]
+  }>({ cobrado: 0, pendiente: 0, condonado: 0, cobradoOtroDia: 0, detalleCobradoOtroDia: [] })
 
   useEffect(() => {
     async function calcular() {
       if (trabajos.length === 0) {
-        setResumenVisitasHoy({ cobrado: 0, pendiente: 0, condonado: 0 })
+        setResumenVisitasHoy({ cobrado: 0, pendiente: 0, condonado: 0, cobradoOtroDia: 0, detalleCobradoOtroDia: [] })
         return
       }
+      const { desde, hasta } = rangoDiaUTC(fecha)
       const grupos = new Map<string, RegistroTrabajo[]>()
       for (const r of trabajos) {
         const clave = r.visita_id ?? r.id
@@ -95,21 +107,38 @@ export default function CierreCaja() {
       const citasPorId = (citasData as Cita[]) ?? []
       const condonacionesPorVisita = (condonacionesData as Condonacion[]) ?? []
 
-      let cobrado = 0, pendiente = 0, condonado = 0
+      let cobrado = 0, pendiente = 0, condonado = 0, cobradoOtroDia = 0
+      const detalleCobradoOtroDia: { clienteNombre: string; monto: number; detalle: string }[] = []
       for (const [visitaId, regs] of grupos) {
         const total = regs.reduce((s, r) => s + Number(r.precio_cobrado), 0)
+        const clienteNombre = regs[0].cliente_nombre || 'Sin nombre'
         const cita = citasPorId.find((c) => c.id === regs[0].cita_id)
         const abono = cita ? Number(cita.abono) : 0
-        const cobradoVisita = cobrosPorVisita.filter((c) => c.visita_id === visitaId).reduce((s, c) => s + Number(c.monto), 0)
+        const cobrosVisita = cobrosPorVisita.filter((c) => c.visita_id === visitaId)
+        const cobradoVisita = cobrosVisita.reduce((s, c) => s + Number(c.monto), 0)
         const condonadoVisita = condonacionesPorVisita.filter((c) => c.visita_id === visitaId).reduce((s, c) => s + Number(c.monto), 0)
         cobrado += cobradoVisita
         condonado += condonadoVisita
         pendiente += Math.max(0, total - abono - cobradoVisita - condonadoVisita)
+
+        // El abono se paga al CREAR la cita -- si esa cita no es de hoy, el
+        // abono que cuenta como "cobrado" de esta visita en realidad entró
+        // otro día.
+        if (abono > 0 && cita && (cita.created_at < desde || cita.created_at >= hasta)) {
+          cobradoOtroDia += abono
+          detalleCobradoOtroDia.push({ clienteNombre, monto: abono, detalle: `abono del ${cita.created_at.slice(0, 10)}` })
+        }
+        for (const cb of cobrosVisita) {
+          if (cb.created_at < desde || cb.created_at >= hasta) {
+            cobradoOtroDia += Number(cb.monto)
+            detalleCobradoOtroDia.push({ clienteNombre, monto: Number(cb.monto), detalle: 'cobro registrado otro día' })
+          }
+        }
       }
-      setResumenVisitasHoy({ cobrado, pendiente, condonado })
+      setResumenVisitasHoy({ cobrado, pendiente, condonado, cobradoOtroDia, detalleCobradoOtroDia })
     }
     calcular()
-  }, [trabajos])
+  }, [trabajos, fecha])
 
   useEffect(() => {
     const { desde, hasta } = rangoDiaUTC(fecha)
@@ -171,7 +200,7 @@ export default function CierreCaja() {
   const totalTrabajos = trabajos.reduce((s, t) => s + Number(t.precio_cobrado), 0)
 
   // Total esperado por cada medio de pago: cobros del día + abonos pagados ese día.
-  const porMetodo: Record<MetodoPago, number> = { efectivo: 0, nequi: 0, daviplata: 0, datafono: 0 }
+  const porMetodo: Record<MetodoPago, number> = { efectivo: 0, nequi: 0, daviplata: 0, datafono: 0, bre_b: 0 }
   for (const c of cobros) porMetodo[c.metodo_pago] += Number(c.monto)
   for (const c of citasConAbono) {
     if (c.abono_metodo_pago) porMetodo[c.abono_metodo_pago] += Number(c.abono)
@@ -179,20 +208,20 @@ export default function CierreCaja() {
   const totalEsperado = Object.values(porMetodo).reduce((s, v) => s + v, 0)
 
   // Préstamos del día: lo dado (sale de caja) y lo pagado/recibido (entra a caja).
-  const prestadoHoyPorMetodo: Record<MetodoPago, number> = { efectivo: 0, nequi: 0, daviplata: 0, datafono: 0 }
+  const prestadoHoyPorMetodo: Record<MetodoPago, number> = { efectivo: 0, nequi: 0, daviplata: 0, datafono: 0, bre_b: 0 }
   let prestadoHoySinMedio = 0
   for (const p of prestamosHoy) {
     if (p.metodo_pago) prestadoHoyPorMetodo[p.metodo_pago] += Number(p.monto)
     else prestadoHoySinMedio += Number(p.monto)
   }
   const totalPrestadoHoy = prestamosHoy.reduce((s, p) => s + Number(p.monto), 0)
-  const pagoPrestamoHoyPorMetodo: Record<MetodoPago, number> = { efectivo: 0, nequi: 0, daviplata: 0, datafono: 0 }
+  const pagoPrestamoHoyPorMetodo: Record<MetodoPago, number> = { efectivo: 0, nequi: 0, daviplata: 0, datafono: 0, bre_b: 0 }
   for (const pg of pagosPrestamoHoy) pagoPrestamoHoyPorMetodo[pg.metodo_pago] += Number(pg.monto)
   const totalPagoPrestamoHoy = pagosPrestamoHoy.reduce((s, pg) => s + Number(pg.monto), 0)
 
   // Reembolsos a clientas hoy (sale de caja): saldo a favor que se devolvió
   // en efectivo/transferencia en vez de dejarse como crédito.
-  const reembolsadoHoyPorMetodo: Record<MetodoPago, number> = { efectivo: 0, nequi: 0, daviplata: 0, datafono: 0 }
+  const reembolsadoHoyPorMetodo: Record<MetodoPago, number> = { efectivo: 0, nequi: 0, daviplata: 0, datafono: 0, bre_b: 0 }
   for (const r of reembolsosHoy) {
     if (r.metodo_pago) reembolsadoHoyPorMetodo[r.metodo_pago] += Number(r.monto)
   }
@@ -203,7 +232,7 @@ export default function CierreCaja() {
   // menos el pago a proveedores si fue en ese medio -- para contrastar en
   // vivo contra lo que se va escribiendo en el formulario.
   const proveedorMontoNum = Number(proveedorMonto || 0)
-  const esperadoPorMetodo: Record<MetodoPago, number> = { efectivo: 0, nequi: 0, daviplata: 0, datafono: 0 }
+  const esperadoPorMetodo: Record<MetodoPago, number> = { efectivo: 0, nequi: 0, daviplata: 0, datafono: 0, bre_b: 0 }
   for (const m of METODOS_PAGO) {
     esperadoPorMetodo[m.valor] =
       porMetodo[m.valor]
@@ -216,12 +245,13 @@ export default function CierreCaja() {
   // Reportado ya guardado por medio, sumando TODOS los cierres de esta
   // fecha (Cambio 5) -- comparado contra lo cobrado simple del día (sin
   // restar salidas, a diferencia del esperado de arriba).
-  const reportadoPorMetodo: Record<MetodoPago, number> = { efectivo: 0, nequi: 0, daviplata: 0, datafono: 0 }
+  const reportadoPorMetodo: Record<MetodoPago, number> = { efectivo: 0, nequi: 0, daviplata: 0, datafono: 0, bre_b: 0 }
   for (const c of cierresDelDia) {
     reportadoPorMetodo.efectivo += Number(c.efectivo_entregado)
     reportadoPorMetodo.nequi += Number(c.nequi_reportado)
     reportadoPorMetodo.daviplata += Number(c.daviplata_reportado)
     reportadoPorMetodo.datafono += Number(c.datafono_reportado)
+    reportadoPorMetodo.bre_b += Number(c.bre_b_reportado)
   }
 
   // Prestado pendiente total (persistente, como la Base).
@@ -260,6 +290,7 @@ export default function CierreCaja() {
       nequi_reportado: Number(nequi || 0),
       daviplata_reportado: Number(daviplata || 0),
       datafono_reportado: Number(datafono || 0),
+      bre_b_reportado: Number(breB || 0),
       proveedor_monto: Number(proveedorMonto || 0),
       proveedor_metodo_pago: Number(proveedorMonto || 0) > 0 ? proveedorMetodo : null,
       proveedor_nota: proveedorNota || null,
@@ -280,6 +311,7 @@ export default function CierreCaja() {
       setNequi('')
       setDaviplata('')
       setDatafono('')
+      setBreB('')
       setProveedorMonto('')
       setProveedorMetodo('')
       setProveedorNota('')
@@ -329,11 +361,21 @@ export default function CierreCaja() {
           <span className="text-sm font-semibold text-brand-700">Total: {pesos(totalTrabajos)}</span>
         </div>
         {trabajos.length > 0 && (
-          <p className="text-xs text-gray-500 mb-2">
+          <>
+          <p className="text-xs text-gray-500 mb-1">
             Cobrado {pesos(resumenVisitasHoy.cobrado)}
             {resumenVisitasHoy.pendiente > 0 && <> · pendiente {pesos(resumenVisitasHoy.pendiente)}</>}
             {resumenVisitasHoy.condonado > 0 && <> · eliminado {pesos(resumenVisitasHoy.condonado)}</>}
+            {resumenVisitasHoy.cobradoOtroDia > 0 && <> (de eso, {pesos(resumenVisitasHoy.cobradoOtroDia)} es abono/cobro de otro día)</>}
           </p>
+          {resumenVisitasHoy.detalleCobradoOtroDia.length > 0 && (
+            <ul className="text-[11px] text-gray-400 mb-2 space-y-0.5">
+              {resumenVisitasHoy.detalleCobradoOtroDia.map((d, i) => (
+                <li key={i}>{d.clienteNombre}: {pesos(d.monto)} ({d.detalle})</li>
+              ))}
+            </ul>
+          )}
+          </>
         )}
         <ul className="space-y-1 max-h-56 overflow-y-auto">
           {trabajos.map((t) => (
@@ -440,7 +482,7 @@ export default function CierreCaja() {
                   <div className="bg-green-50 rounded-lg py-2">
                     <p className="text-[11px] text-green-700">Entrado</p>
                     <p className="text-sm font-semibold text-green-700">
-                      {pesos(Number(c.efectivo_entregado) + Number(c.nequi_reportado) + Number(c.daviplata_reportado) + Number(c.datafono_reportado))}
+                      {pesos(Number(c.efectivo_entregado) + Number(c.nequi_reportado) + Number(c.daviplata_reportado) + Number(c.datafono_reportado) + Number(c.bre_b_reportado))}
                     </p>
                   </div>
                   <div className="bg-red-50 rounded-lg py-2">
@@ -459,7 +501,8 @@ export default function CierreCaja() {
                           m.valor === 'efectivo' ? 'efectivo_entregado'
                           : m.valor === 'nequi' ? 'nequi_reportado'
                           : m.valor === 'daviplata' ? 'daviplata_reportado'
-                          : 'datafono_reportado'
+                          : m.valor === 'datafono' ? 'datafono_reportado'
+                          : 'bre_b_reportado'
                         ]))}
                       </span>
                     </li>
@@ -562,10 +605,20 @@ export default function CierreCaja() {
               />
               {contrasteInline(datafono, esperadoPorMetodo.datafono)}
             </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Bre-B</label>
+              <input
+                type="text" inputMode="numeric"
+                value={formatearPesosInput(breB)}
+                onChange={(e) => setBreB(soloDigitos(e.target.value))}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2"
+              />
+              {contrasteInline(breB, esperadoPorMetodo.bre_b)}
+            </div>
           </div>
 
           <p className="text-sm font-medium text-brand-700">
-            Total reportado: {pesos(Number(efectivo || 0) + Number(nequi || 0) + Number(daviplata || 0) + Number(datafono || 0))}
+            Total reportado: {pesos(Number(efectivo || 0) + Number(nequi || 0) + Number(daviplata || 0) + Number(datafono || 0) + Number(breB || 0))}
           </p>
 
           <div className="border-t border-gray-100 pt-3 space-y-3">

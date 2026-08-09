@@ -322,6 +322,7 @@
         <div class="grp-label">Personal (profesional)</div>
         <a class="nav-link" href="#pe-jornada">Mi jornada</a>
         <a class="nav-link" href="#pe-registro">Registrar trabajo</a>
+        <a class="nav-link" href="#pe-comision">Mi comisión</a>
         <a class="nav-link" href="#pe-permisos">Permisos</a>
         <a class="nav-link" href="#pe-perfil">Mi perfil</a>
       </div>
@@ -451,7 +452,7 @@
         <div class="mock-body">
           <div class="mock-card">
             <div style="display:flex;justify-content:space-between;">
-              <div><b>María Pérez</b><div style="font-size:11px;color:var(--neutral);">2:30 pm · atendió Norma Gabriela</div></div>
+              <div><b>María Pérez</b><div style="font-size:11px;color:var(--neutral);">2:30 pm · atendió Norma Gabriela · <a style="font-size:11px;">300 123 4567</a></div></div>
               <span style="color:var(--warn);font-weight:700;font-size:12.5px;">Debe $70.000</span>
             </div>
             <hr class="mock-hr">
@@ -468,14 +469,16 @@
         <thead><tr><th>Campo</th><th>Para qué sirve</th></tr></thead>
         <tbody>
           <tr><td>Selector de fecha</td><td>Ve las visitas atendidas ese día (agrupadas por "visita": todos los servicios de una misma clienta en una misma atención cuentan como una sola cuenta).</td></tr>
+          <tr><td>Teléfono de la clienta</td><td>Si la visita viene de una cita con la clienta ya registrada, su teléfono aparece junto a la hora y quién la atendió — para tenerlo a mano al cobrar sin tener que buscarlo aparte.</td></tr>
           <tr><td>Recibo por visita</td><td>Cada servicio con su precio, Subtotal, Abono ya pagado (si vino de una cita), Cobrado (si ya se abonó parte), y el TOTAL pendiente en negrita.</td></tr>
           <tr><td>Botón "Cobrar"</td><td>Abre el formulario para registrar el pago de esa visita.</td></tr>
-          <tr><td>Monto + Medio de pago</td><td>Cuánto se paga y con qué medio (Efectivo, Nequi, Daviplata, Datáfono).</td></tr>
+          <tr><td>Monto + Medio de pago</td><td>Cuánto se paga y con qué medio (Efectivo, Nequi, Daviplata, Datáfono, Bre-B).</td></tr>
           <tr><td>"+ Agregar este medio y sumar otro"</td><td>Permite dividir un mismo cobro en varios medios (ej. mitad efectivo, mitad Nequi): agrega esa línea y deja escribir la siguiente, mostrando cuánto llevas sumado del total pendiente.</td></tr>
-          <tr><td>Foto del pago</td><td>Obligatoria si el medio no es efectivo (comprobante de Nequi/Daviplata/Datáfono); opcional si es efectivo. Se puede tomar en el momento o elegir una ya guardada en el celular.</td></tr>
+          <tr><td>Foto del pago</td><td>Obligatoria si el medio no es efectivo (comprobante de Nequi/Daviplata/Datáfono/Bre-B); opcional si es efectivo. Se puede tomar en el momento o elegir una ya guardada en el celular.</td></tr>
           <tr><td>Nota</td><td>Comentario libre sobre ese cobro.</td></tr>
           <tr><td>"Registrar cobro"</td><td>Guarda todas las líneas de pago agregadas de una vez. Puede ser un pago parcial: lo que falte sigue apareciendo como pendiente.</td></tr>
           <tr><td>"Eliminar saldo" <span style="color:var(--neutral);">(solo Super Admin)</span></td><td>Quita un saldo pendiente de la lista SIN registrarlo como dinero cobrado — para cortesías o saldos que la dueña decide no cobrar. Pide un motivo obligatorio y queda como "Eliminado (no cobrado)" en el recibo; nunca se edita ni se borra.</td></tr>
+          <tr><td>"Anular (se registró por error)" <span style="color:var(--neutral);">(solo Super Admin)</span></td><td>Para una visita mal registrada (persona equivocada, duplicada, etc.) — pide un motivo obligatorio y la anula sin borrar el historial; deja de contar como pendiente ni como cobrada, sin importar si ya tenía pagos registrados.</td></tr>
         </tbody>
       </table></div>
       <div class="callout good">Cuando ya no debe nada, la visita pasa a la lista "Ya cobradas" con una etiqueta verde, y se puede ver la foto de cada pago con "ver foto".</div>
@@ -521,10 +524,10 @@
         <thead><tr><th>Campo</th><th>Para qué sirve</th></tr></thead>
         <tbody>
           <tr><td>Base (efectivo inicial)</td><td>Con cuánto efectivo se abrió la caja ese día.</td></tr>
-          <tr><td>Efectivo / Nequi / Daviplata / Datáfono</td><td>Lo que hay al cerrar en cada medio; Efectivo es obligatorio, los demás quedan en 0 si no aplican. Debajo de cada campo aparece en vivo cuánto se "esperaba" en ese medio y si lo escrito coincide, sobra o falta — para corregir antes de guardar.</td></tr>
+          <tr><td>Efectivo / Nequi / Daviplata / Datáfono / Bre-B</td><td>Lo que hay al cerrar en cada medio; Efectivo es obligatorio, los demás quedan en 0 si no aplican. Debajo de cada campo aparece en vivo cuánto se "esperaba" en ese medio y si lo escrito coincide, sobra o falta — para corregir antes de guardar.</td></tr>
           <tr><td>Pago a proveedores</td><td>Opcional: monto, medio de pago y nota de a quién/por qué se le pagó a un proveedor ese día (sale de la caja, y se descuenta del "esperado" de ese medio).</td></tr>
           <tr><td>Observaciones</td><td>Cualquier nota libre sobre el cierre.</td></tr>
-          <tr><td>Trabajos completados del día</td><td>Lista de referencia, no editable: todo lo que se registró como trabajo hecho ese día. Debajo, un resumen de cuánto de eso ya se cobró, cuánto sigue pendiente y cuánto se eliminó (condonó) — sin importar en qué día se cobró cada visita.</td></tr>
+          <tr><td>Trabajos completados del día</td><td>Lista de referencia, no editable: todo lo que se registró como trabajo hecho ese día. Debajo, un resumen de cuánto de eso ya se cobró, cuánto sigue pendiente y cuánto se eliminó (condonó) — sin importar en qué día se cobró cada visita. Dentro de "Cobrado" se distingue además lo cobrado <b>hoy mismo</b> de lo cobrado/abonado <b>en otro día</b> (ej. un abono de una cita agendada hace una semana), con el detalle itemizado de cada caso — para que ese dinero no se confunda con lo esperado del día de hoy.</td></tr>
           <tr><td>Cobrado del día por medio</td><td>Cuánto se cobró (Cobros + abonos de citas) en cada medio de pago ese día, sin importar de qué visita — es la base del "esperado".</td></tr>
           <tr><td>Préstamos del día</td><td>Lo prestado hoy (sale de caja) y lo que devolvieron hoy (entra a caja), separado por medio de pago.</td></tr>
           <tr><td>"Prestado pendiente"</td><td>Aviso persistente (no depende de la fecha) con el total que aún deben las profesionales en préstamos/fiados.</td></tr>
@@ -537,6 +540,7 @@
     <div class="page-block" id="sa-citas" data-role="superadmin">
       <div class="page-head"><h3>Citas</h3> <code class="route">/citas</code> <span style="font-size:11px;color:var(--neutral);">— también la ve Admin</span></div>
       <p class="lede">Agendar citas internamente y administrar la agenda del día: confirmar, reprogramar, asignar profesional, cancelar o completar.</p>
+      <div class="callout info">La agenda del día se puede ver de dos formas con el switch "Por estado" / "Por profesional": la primera es la vista de siempre (pendientes, confirmadas…); la segunda agrupa las mismas citas bajo el nombre de cada profesional (y "Sin asignar" al final) — útil para ver de un vistazo la carga de cada una.</div>
       <div class="mock">
         <div class="mock-bar">/citas — tarjeta de una cita</div>
         <div class="mock-body">
@@ -629,7 +633,7 @@
           <tr><td>Tipo <span style="color:var(--neutral);">(solo Super Admin)</span></td><td>Día de descanso o Permiso.</td></tr>
           <tr><td>Desde / Hasta (fecha)</td><td>Rango de días que cubre.</td></tr>
           <tr><td>Hora desde / Hora hasta (opcional)</td><td>Si es solo por unas horas del día, no el día completo.</td></tr>
-          <tr><td>Motivo (opcional)</td><td>Explicación libre.</td></tr>
+          <tr><td>Motivo</td><td>Obligatorio cuando el Personal o el Admin solicitan para sí mismos (la solicitud queda pendiente y la dueña necesita saber por qué); opcional cuando la dueña lo registra ella misma, para sí o para otra persona.</td></tr>
           <tr><td>Aprobar / Rechazar <span style="color:var(--neutral);">(solo Super Admin)</span></td><td>Resuelve las solicitudes pendientes que envía el personal.</td></tr>
         </tbody>
       </table></div>
@@ -711,6 +715,7 @@
         <tbody>
           <tr><td>"Registrar pago ▾"</td><td>Abre un mini-formulario para abonar a la deuda: monto, medio de pago y nota — permite pagos parciales. No aplica a los insumos Internos (no generan deuda).</td></tr>
           <tr><td>"Ya se descontó de su comisión"</td><td>Para saldar la deuda SIN que entre dinero nuevo a caja (ej. se le pagó menos comisión ese mes) — no queda registrado en el cierre de caja.</td></tr>
+          <tr><td>"Borrar"</td><td>Elimina por completo un préstamo/fiado que se asignó por error a la persona equivocada. Pide confirmación. Si ya tiene pagos registrados, el sistema no deja borrarlo (para no perder ese historial) y avisa que hay que corregirlo con un movimiento aparte en vez de borrar.</td></tr>
         </tbody>
       </table></div>
       <div class="callout info">"Deben (pendiente)" muestra el total que debe cada persona ahora mismo, sumando todos sus préstamos y fiados de Vitrina activos menos lo que ya ha pagado — los insumos Internos nunca cuentan aquí porque no generan deuda.</div>
@@ -866,7 +871,7 @@
 
     <div class="page-block" id="ad-reportes" data-role="admin">
       <div class="page-head"><h3>Reportes</h3> <code class="route">/reportes</code> <span style="font-size:11px;color:var(--neutral);">— exclusivo de Admin</span></div>
-      <p class="lede">Es la misma información que la dueña ve en la subpestaña <a href="#sa-contabilidad">"Comisiones y abonos" de Contabilidad</a>: cuánto se le debe pagar a cada especialista y los abonos registrados en el rango — pero sin el resto de Contabilidad (recaudo, salidas, ganancia).</p>
+      <p class="lede">Comparte pantalla con la subpestaña <a href="#sa-contabilidad">"Comisiones y abonos" de Contabilidad</a>, pero el Admin solo ve la parte de <b>Abonos registrados</b> — la tabla de "Comisiones por especialista" (cuánto se le paga a cada quien) está oculta para este rol: cuánto gana cada profesional es información que solo ve la dueña.</p>
     </div>
 
     <!-- ======================= PERSONAL ======================= -->
@@ -956,9 +961,33 @@
       <div class="callout good">Al guardar, si venía de una cita con abono, el mensaje confirma cuánto queda de saldo — pero ese saldo lo cobrará la administradora, nunca la profesional.</div>
     </div>
 
+    <div class="page-block" id="pe-comision" data-role="personal">
+      <div class="page-head"><h3>Mi comisión</h3> <code class="route">/mi-comision</code></div>
+      <p class="lede">Autoconsulta de lo que ganó por su propio trabajo — la misma cuenta que hace la dueña en Contabilidad, pero solo con sus propios datos.</p>
+      <div class="mock">
+        <div class="mock-bar">/mi-comision</div>
+        <div class="mock-body">
+          <div class="mock-nav"><span class="active">Últimos 7 días</span><span>Últimos 15 días</span></div>
+          <div class="mock-grid2" style="margin-top:8px;">
+            <div class="mock-stat"><div class="l">Facturado</div><div class="v">$420k</div></div>
+            <div class="mock-stat"><div class="l">Tu comisión (50%)</div><div class="v">$210k</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="table-wrap"><table class="field-table">
+        <thead><tr><th>Campo</th><th>Para qué sirve</th></tr></thead>
+        <tbody>
+          <tr><td>Últimos 7 días / Últimos 15 días</td><td>Cambia el período que se está mirando (piensa en la semana o quincena de pago).</td></tr>
+          <tr><td>Facturado / Tu comisión (50%)</td><td>Suma de lo trabajado en el período y el 50% que le corresponde.</td></tr>
+          <tr><td>Debes (préstamos) / Te queda</td><td>Solo aparece si tiene préstamos pendientes: descuenta lo que debe de la comisión y muestra el neto.</td></tr>
+          <tr><td>Tabla "Por día"</td><td>La misma comisión desglosada día por día, con la cantidad de servicios de cada uno y el acumulado al final.</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+
     <div class="page-block" id="pe-permisos" data-role="personal">
       <div class="page-head"><h3>Permisos</h3> <code class="route">/permisos</code></div>
-      <p class="lede">Solicitar un permiso o descanso propio. Ver la explicación completa en <a href="#sa-permisos">Permisos (Super Admin)</a> — para este rol siempre queda <b>pendiente de aprobación</b> de la dueña.</p>
+      <p class="lede">Solicitar un permiso o descanso propio. Ver la explicación completa en <a href="#sa-permisos">Permisos (Super Admin)</a> — para este rol siempre queda <b>pendiente de aprobación</b> de la dueña, y el motivo es obligatorio.</p>
     </div>
 
     <div class="page-block" id="pe-perfil" data-role="personal">
@@ -968,7 +997,7 @@
         <thead><tr><th>Campo</th><th>Para qué sirve</th></tr></thead>
         <tbody>
           <tr><td>Especialidades, cédula, teléfono, correo, dirección, nacimiento, ingreso al spa</td><td>Datos personales que cargó la dueña; si algo está mal, se le avisa a la administración para corregirlo (la profesional no los edita ella misma).</td></tr>
-          <tr><td>Mis préstamos / fiados</td><td>Historial de lo prestado, con "Debes $X" si aún tiene saldo pendiente.</td></tr>
+          <tr><td>Mis préstamos / fiados</td><td>Historial de lo prestado, con "Debes $X" si aún tiene saldo pendiente. Si ya abonó parte de un préstamo, se ve reflejado aquí (cuánto debe de lo que queda, y la lista de abonos ya hechos) — no solo cuando queda saldado del todo.</td></tr>
         </tbody>
       </table></div>
     </div>
@@ -1060,14 +1089,14 @@
           <thead><tr><th>Pantalla</th><th>Super Admin</th><th>Admin</th><th>Personal</th><th>Clienta</th></tr></thead>
           <tbody>
             <tr><td>Panel</td><td>✓</td><td>—</td><td>—</td><td>—</td></tr>
-            <tr><td>Cobros</td><td>✓</td><td>✓</td><td>—</td><td>—</td></tr>
+            <tr><td>Cobros</td><td>✓ (+ anular)</td><td>✓</td><td>—</td><td>—</td></tr>
             <tr><td>Cierre de caja</td><td>✓ (lo llena + reporte)</td><td>✓ (lo llena)</td><td>—</td><td>—</td></tr>
             <tr><td>Citas</td><td>✓</td><td>✓</td><td>—</td><td>—</td></tr>
             <tr><td>Ventas</td><td>✓ (+ anular)</td><td>✓</td><td>—</td><td>—</td></tr>
             <tr><td>Asistencia</td><td>✓</td><td>✓</td><td>—</td><td>—</td></tr>
             <tr><td>Permisos</td><td>✓ (aprueba)</td><td>✓ (solicita)</td><td>✓ (solicita)</td><td>—</td></tr>
-            <tr><td>Contabilidad / Reportes</td><td>✓ completa</td><td>✓ solo comisiones</td><td>—</td><td>—</td></tr>
-            <tr><td>Préstamos</td><td>✓</td><td>—</td><td>—</td><td>—</td></tr>
+            <tr><td>Contabilidad / Reportes</td><td>✓ completa</td><td>✓ solo abonos (sin comisiones)</td><td>—</td><td>—</td></tr>
+            <tr><td>Préstamos</td><td>✓ (+ borrar)</td><td>—</td><td>—</td><td>—</td></tr>
             <tr><td>Inventario</td><td>✓</td><td>—</td><td>—</td><td>—</td></tr>
             <tr><td>Historial</td><td>✓</td><td>—</td><td>—</td><td>—</td></tr>
             <tr><td>Auditoría</td><td>✓</td><td>—</td><td>—</td><td>—</td></tr>
@@ -1075,6 +1104,7 @@
             <tr><td>Servicios</td><td>✓</td><td>—</td><td>—</td><td>—</td></tr>
             <tr><td>Mi jornada</td><td>—</td><td>✓</td><td>✓</td><td>—</td></tr>
             <tr><td>Registrar trabajo</td><td>—</td><td>—</td><td>✓</td><td>—</td></tr>
+            <tr><td>Mi comisión</td><td>—</td><td>—</td><td>✓</td><td>—</td></tr>
             <tr><td>Mi perfil</td><td>—</td><td>—</td><td>✓</td><td>—</td></tr>
             <tr><td>Portal (solicitar cita)</td><td>—</td><td>—</td><td>—</td><td>✓</td></tr>
           </tbody>

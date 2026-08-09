@@ -148,6 +148,26 @@ export default function Prestamos() {
     cargar()
   }
 
+  // Borra un préstamo que se asignó por error a la persona equivocada. Si ya
+  // tiene pagos registrados, la base de datos lo bloquea (prestamo_pagos es
+  // un ledger inmutable sin cascada) -- en ese caso se avisa que hay que
+  // corregirlo con un pago/préstamo aparte en vez de borrar el historial.
+  async function borrarPrestamo(p: Prestamo) {
+    if (!confirm(`¿Borrar el préstamo de ${p.persona?.nombre ?? 'esta persona'}${p.tipo === 'dinero' ? ` por ${pesos(Number(p.monto))}` : ''}? No se puede deshacer.`)) return
+    setError(null); setMensaje(null)
+    const { error } = await supabase.from('prestamos').delete().eq('id', p.id)
+    if (error) {
+      setError(
+        error.code === '23503'
+          ? 'No se puede borrar: ya tiene pagos registrados. Si fue un error, corrígelo con un movimiento aparte en vez de borrar el historial.'
+          : 'No se pudo borrar: ' + error.message
+      )
+      return
+    }
+    setMensaje('Préstamo borrado.')
+    cargar()
+  }
+
   async function registrarPago(p: Prestamo) {
     if (!profile) return
     setPagoError(null)
@@ -370,16 +390,21 @@ export default function Prestamos() {
                   </ul>
                 )}
 
-                {pendiente > 0 && pagandoId !== p.id && (
+                {pagandoId !== p.id && (
                   <div className="flex flex-wrap gap-3">
-                    <button onClick={() => abrirPago(p)} className="text-xs text-brand-600 font-medium">
-                      Registrar pago ▾
-                    </button>
-                    {p.tipo === 'dinero' && (
+                    {pendiente > 0 && (
+                      <button onClick={() => abrirPago(p)} className="text-xs text-brand-600 font-medium">
+                        Registrar pago ▾
+                      </button>
+                    )}
+                    {pendiente > 0 && p.tipo === 'dinero' && (
                       <button onClick={() => marcarSaldadoSinCaja(p)} className="text-xs text-gray-400 font-medium">
                         Ya se descontó de su comisión
                       </button>
                     )}
+                    <button onClick={() => borrarPrestamo(p)} className="text-xs text-red-500 font-medium">
+                      Borrar
+                    </button>
                   </div>
                 )}
 

@@ -20,6 +20,7 @@ import Reportes from './pages/Reportes'
 import Permisos from './pages/Permisos'
 import Prestamos from './pages/Prestamos'
 import MiPerfil from './pages/MiPerfil'
+import MiComision from './pages/MiComision'
 import Historial from './pages/Historial'
 import CuentasPorCobrar from './pages/CuentasPorCobrar'
 import Productos from './pages/Productos'
@@ -210,6 +211,14 @@ export default function App() {
               element={
                 <ProtectedRoute roles={['personal']}>
                   <MiPerfil />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/mi-comision"
+              element={
+                <ProtectedRoute roles={['personal']}>
+                  <MiComision />
                 </ProtectedRoute>
               }
             />

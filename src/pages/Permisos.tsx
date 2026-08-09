@@ -50,6 +50,10 @@ export default function Permisos() {
     if (!profile) return
     setError(null); setMensaje(null)
     if (hasta < desde) { setError('La fecha final no puede ser antes de la inicial.'); return }
+    // El superadmin registra con aprobación automática (para sí misma o para
+    // otra persona) y no necesita justificarlo. Cualquier otra solicitud
+    // queda pendiente de que ella la apruebe, así que sí necesita el motivo.
+    if (!esSuper && !motivo.trim()) { setError('Escribe el motivo de la solicitud.'); return }
 
     // El superadmin registra para quien elija (o para sí mismo) y queda aprobado.
     // Los demás solicitan para sí mismos y queda pendiente.
@@ -128,8 +132,8 @@ export default function Permisos() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1">Motivo (opcional)</label>
-          <input value={motivo} onChange={(e) => setMotivo(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2" />
+          <label className="block text-sm font-medium mb-1">Motivo{esSuper ? ' (opcional)' : ''}</label>
+          <input required={!esSuper} value={motivo} onChange={(e) => setMotivo(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2" />
         </div>
 
         <button type="submit" className="w-full bg-brand-600 hover:bg-brand-700 text-white font-medium rounded-lg py-2 transition">

@@ -12,6 +12,9 @@ interface Visita {
   clienteId: string | null
   citaId: string | null
   clienteNombre: string
+  // Teléfono de la clienta ya registrada (si la visita viene de una cita
+  // con cliente_id), para tenerlo a mano al cobrar sin buscarlo aparte.
+  telefono: string | null
   empleadaNombre: string
   hora: string
   registros: RegistroTrabajo[]
@@ -108,6 +111,13 @@ export default function CuentasPorCobrar() {
     const creditos = (creditosData as CreditoCliente[]) ?? []
     const condonaciones = (condonacionesData as Condonacion[]) ?? []
 
+    // Teléfono de las clientas ya registradas, para mostrarlo al cobrar.
+    const clienteIds = [...new Set(citas.map((c) => c.cliente_id).filter(Boolean))] as string[]
+    const { data: perfilesData } = clienteIds.length > 0
+      ? await supabase.from('profiles').select('id, telefono').in('id', clienteIds)
+      : { data: [] as { id: string; telefono: string | null }[] }
+    const telefonoPorCliente = new Map((perfilesData ?? []).map((p) => [p.id, p.telefono]))
+
     const lista: Visita[] = [...grupos.entries()].map(([visitaId, regsVisita]) => {
       const total = regsVisita.reduce((s, r) => s + Number(r.precio_cobrado), 0)
       const cita = citas.find((c) => c.id === regsVisita[0].cita_id)
@@ -121,6 +131,7 @@ export default function CuentasPorCobrar() {
         clienteId: cita?.cliente_id ?? null,
         citaId: cita?.id ?? null,
         clienteNombre: regsVisita[0].cliente_nombre || 'Sin nombre',
+        telefono: (cita?.cliente_id ? telefonoPorCliente.get(cita.cliente_id) : null) ?? cita?.cliente_telefono ?? null,
         empleadaNombre: regsVisita[0].empleada?.nombre ?? '',
         hora: new Date(regsVisita[0].created_at).toLocaleTimeString('es-CO', {
           hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'America/Bogota'
@@ -313,6 +324,28 @@ export default function CuentasPorCobrar() {
     if (data?.signedUrl) window.open(data.signedUrl, '_blank')
   }
 
+  // Anula una visita registrada por error (duplicada, persona equivocada,
+  // etc.) -- solo superadmin. No borra nada: el trigger de inmutabilidad
+  // deja pasar anulado/motivo_anulacion/anulado_por/anulado_at, así que
+  // el registro queda como historial pero deja de contar como pendiente.
+  async function anularVisita(v: Visita) {
+    if (!profile) return
+    const motivo = prompt(`¿Por qué se anula la visita de ${v.clienteNombre}? (ej. duplicada, registrada por error)`)
+    if (motivo === null) return
+    if (!motivo.trim()) { setError('Escribe el motivo de la anulación.'); return }
+    setError(null)
+    const { error: updErr } = await supabase
+      .from('registros_trabajo')
+      .update({ anulado: true, motivo_anulacion: motivo.trim(), anulado_por: profile.id, anulado_at: new Date().toISOString() })
+      .in('id', v.registros.map((r) => r.id))
+    if (updErr) {
+      setError('No se pudo anular: ' + updErr.message)
+      return
+    }
+    setMensaje(`Se anuló la visita de ${v.clienteNombre}.`)
+    cargar()
+  }
+
   const pendientes = visitas.filter((v) => v.pendiente > 0)
   const porResolver = visitas.filter((v) => v.pendiente === 0 && v.saldoFavor > 0 && !v.credito)
   const cobradas = visitas.filter((v) => v.pendiente === 0 && (v.saldoFavor === 0 || v.credito))
@@ -325,7 +358,10 @@ export default function CuentasPorCobrar() {
         <div className="flex items-center justify-between gap-2">
           <div className="min-w-0">
             <p className="font-medium text-sm truncate">{v.clienteNombre}</p>
-            <p className="text-xs text-gray-400">{v.hora} · atendió {v.empleadaNombre}</p>
+            <p className="text-xs text-gray-400">
+              {v.hora} · atendió {v.empleadaNombre}
+              {v.telefono && <> · <a href={`tel:${v.telefono}`} className="underline">{v.telefono}</a></>}
+            </p>
           </div>
           {v.pendiente > 0 ? (
             <span className="shrink-0 text-sm font-semibold text-amber-600">
@@ -604,6 +640,15 @@ export default function CuentasPorCobrar() {
               </button>
             </div>
           </form>
+        )}
+
+        {esSuperadmin && cobrandoId !== v.visitaId && condonandoId !== v.visitaId && resolviendoId !== v.visitaId && (
+          <button
+            onClick={() => anularVisita(v)}
+            className="w-full text-xs text-red-500 hover:text-red-700 py-1"
+          >
+            Anular (se registró por error)
+          </button>
         )}
       </li>
     )

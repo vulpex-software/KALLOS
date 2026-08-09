@@ -18,6 +18,7 @@ const gruposPorRol: Record<string, GrupoLinks[]> = {
     { titulo: null, items: [
       { to: '/jornada', label: 'Mi jornada' },
       { to: '/registro', label: 'Registrar trabajo' },
+      { to: '/mi-comision', label: 'Mi comisión' },
       { to: '/permisos', label: 'Permisos' },
       { to: '/mi-perfil', label: 'Mi perfil' }
     ] }
