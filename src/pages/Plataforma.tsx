@@ -347,6 +347,58 @@ export default function Plataforma() {
     cargar()
   }
 
+  // --- Acceso de la dueña (soporte: restablecer usuario/contraseña) ---
+  const [accesoAbiertoId, setAccesoAbiertoId] = useState<string | null>(null)
+  const [aNuevoUsuario, setANuevoUsuario] = useState('')
+  const [aNuevaPassword, setANuevaPassword] = useState('')
+  const [aError, setAError] = useState<string | null>(null)
+  const [aMensaje, setAMensaje] = useState<string | null>(null)
+  const [guardandoAccesoDueña, setGuardandoAccesoDueña] = useState(false)
+
+  function abrirAccesoDueña(s: ResumenSalon) {
+    if (accesoAbiertoId === s.id) { setAccesoAbiertoId(null); return }
+    setAccesoAbiertoId(s.id)
+    setANuevoUsuario('')
+    setANuevaPassword('')
+    setAError(null)
+    setAMensaje(null)
+  }
+
+  async function restablecerAccesoDueña(s: ResumenSalon) {
+    setAError(null)
+    setAMensaje(null)
+    if (!aNuevoUsuario.trim() && !aNuevaPassword.trim()) {
+      setAError('Escribe un nuevo usuario/correo o una nueva contraseña.')
+      return
+    }
+    if (aNuevaPassword.trim() && aNuevaPassword.trim().length < 6) {
+      setAError('La contraseña debe tener al menos 6 caracteres.')
+      return
+    }
+    setGuardandoAccesoDueña(true)
+    const { error } = await supabase.rpc('plataforma_resetear_acceso_superadmin', {
+      p_salon_id: s.id,
+      p_nuevo_usuario: aNuevoUsuario.trim() || null,
+      p_nueva_password: aNuevaPassword.trim() || null
+    })
+    setGuardandoAccesoDueña(false)
+    if (error) {
+      setAError(
+        error.message.toLowerCase().includes('duplicate') || error.message.toLowerCase().includes('unique')
+          ? 'Ese usuario/correo ya está en uso por otra cuenta.'
+          : 'No se pudo actualizar: ' + error.message
+      )
+      return
+    }
+    setAMensaje(
+      'Acceso actualizado.' +
+        (aNuevoUsuario.trim() ? ` Su usuario para entrar es exactamente: ${aNuevoUsuario.trim()}.` : '') +
+        ' Avísale a la dueña su nuevo usuario/contraseña.'
+    )
+    setANuevoUsuario('')
+    setANuevaPassword('')
+  }
+
   // --- Entrar como (soporte) ---
   const [impersonando, setImpersonando] = useState<string | null>(null)
   const [errorImpersonar, setErrorImpersonar] = useState<string | null>(null)
@@ -521,7 +573,7 @@ Registro de clientas: ${kit.linkRegistro}`}
               </button>
             </div>
 
-            {errorImpersonar && pagosAbiertoId !== s.id && editandoId !== s.id && (
+            {errorImpersonar && pagosAbiertoId !== s.id && editandoId !== s.id && accesoAbiertoId !== s.id && (
               <div className="text-xs bg-red-50 text-red-700 border border-red-200 rounded-lg p-2">{errorImpersonar}</div>
             )}
 
@@ -533,7 +585,42 @@ Registro de clientas: ${kit.linkRegistro}`}
                 <button onClick={() => abrirPagos(s)} className="text-xs text-brand-600 font-medium">
                   {pagosAbiertoId === s.id ? 'Cerrar ▲' : 'Pagos y vencimiento ▾'}
                 </button>
+                <button onClick={() => abrirAccesoDueña(s)} className="text-xs text-brand-600 font-medium">
+                  {accesoAbiertoId === s.id ? 'Cerrar ▲' : 'Acceso de la dueña ▾'}
+                </button>
               </div>
+
+              {accesoAbiertoId === s.id && (
+                <div className="space-y-2 bg-gray-50 rounded-lg p-2">
+                  <p className="text-xs text-gray-500">
+                    Restablece el usuario/contraseña de la superadmin de este salón -- para cuando quedó bloqueada y no hay nadie más en su salón que pueda cambiárselo.
+                  </p>
+                  {aError && <div className="text-xs bg-red-50 text-red-700 border border-red-200 rounded-lg p-2">{aError}</div>}
+                  {aMensaje && <div className="text-xs bg-green-50 text-green-700 border border-green-200 rounded-lg p-2">{aMensaje}</div>}
+                  <input
+                    autoCapitalize="none"
+                    placeholder="Nuevo usuario o correo (dejar vacío para no cambiar)"
+                    value={aNuevoUsuario}
+                    onChange={(e) => setANuevoUsuario(e.target.value)}
+                    className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
+                  />
+                  <input
+                    type="text"
+                    minLength={6}
+                    placeholder="Nueva contraseña (dejar vacío para no cambiar)"
+                    value={aNuevaPassword}
+                    onChange={(e) => setANuevaPassword(e.target.value)}
+                    className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
+                  />
+                  <button
+                    onClick={() => restablecerAccesoDueña(s)}
+                    disabled={guardandoAccesoDueña}
+                    className="w-full bg-brand-600 hover:bg-brand-700 disabled:opacity-60 text-white text-sm font-medium rounded-lg py-1.5"
+                  >
+                    {guardandoAccesoDueña ? 'Actualizando…' : 'Restablecer acceso'}
+                  </button>
+                </div>
+              )}
 
               {pagosAbiertoId === s.id && (
                 <div className="space-y-2 bg-gray-50 rounded-lg p-2">

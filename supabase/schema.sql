@@ -1750,6 +1750,60 @@ begin
 end;
 $$;
 
+-- Soporte: el operador restablece el usuario/contraseña de LA DUEÑA de un
+-- salón cliente (ej. si quedó bloqueada y no hay nadie más en ese salón que
+-- pueda cambiárselo -- solo la propia dueña puede hacerlo vía
+-- admin_actualizar_acceso, así que si ella queda sin acceso no hay
+-- recuperación dentro de la app sin esto). Resuelve el superadmin activo
+-- MÁS ANTIGUO de ese salón (mismo criterio que la Edge Function de
+-- "Entrar como" -- nunca por un correo que mande el cliente). Mismo dominio
+-- compartido que el login (ver el fix de admin_actualizar_acceso arriba).
+create or replace function public.plataforma_resetear_acceso_superadmin(
+  p_salon_id uuid,
+  p_nuevo_usuario text default null,
+  p_nueva_password text default null
+)
+returns void
+language plpgsql
+security definer
+set search_path = public, auth, extensions
+as $$
+declare
+  v_user_id uuid;
+  v_email text;
+begin
+  if not public.es_operador() then
+    raise exception 'Solo un operador de plataforma puede hacer esto.';
+  end if;
+
+  select id into v_user_id
+    from public.profiles
+    where salon_id = p_salon_id and rol = 'superadmin' and activo = true
+    order by created_at asc
+    limit 1;
+  if v_user_id is null then
+    raise exception 'Ese salón no tiene un superadmin activo.';
+  end if;
+
+  if p_nuevo_usuario is not null and length(trim(p_nuevo_usuario)) > 0 then
+    v_email := lower(trim(p_nuevo_usuario));
+    if position('@' in v_email) = 0 then
+      v_email := v_email || '@cuentas.kallos.app';
+    end if;
+    update auth.users set email = v_email where id = v_user_id;
+  end if;
+
+  if p_nueva_password is not null and length(p_nueva_password) > 0 then
+    if length(p_nueva_password) < 6 then
+      raise exception 'La contraseña debe tener al menos 6 caracteres.';
+    end if;
+    update auth.users set encrypted_password = crypt(p_nueva_password, gen_salt('bf')) where id = v_user_id;
+  end if;
+end;
+$$;
+
+grant execute on function public.plataforma_resetear_acceso_superadmin(uuid, text, text) to authenticated;
+
 -- Alta self-serve (RPC pública, anon): un dueño de salón se registra solo
 -- y queda activo de inmediato -- sin aprobación del operador (riesgo de
 -- abuso aceptado para v1, sin CAPTCHA/rate-limit; ver CLAUDE.md). El
