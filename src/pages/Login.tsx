@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { normalizarCorreoOUsuario } from '../lib/authDominio'
 import { useAuth } from '../contexts/AuthContext'
@@ -94,8 +94,7 @@ export default function Login() {
         </button>
 
         <p className="text-center text-sm text-gray-400">
-          ¿Eres clienta?{' '}
-          <Link to="/registro-cliente" className="text-brand-400 font-medium">Crea tu cuenta</Link>
+          ¿Eres clienta? Pídele a tu salón el link de registro (te lo comparten por WhatsApp o QR).
         </p>
         <p className="text-center text-[11px] text-gray-600">Developed by Vulpex Software SAS</p>
       </form>
