@@ -154,6 +154,23 @@ export interface PrestamoPago {
   created_at: string
 }
 
+// Pago de comisión (ledger histórico): fecha_desde/fecha_hasta son solo la
+// referencia de qué período se calculó para llegar al monto -- el saldo
+// pendiente real sale de sumar TODO lo ganado histórico menos la suma de
+// estos pagos, no de "cerrar" ese rango puntual.
+export interface ComisionPago {
+  id: string
+  salon_id: string
+  persona_id: string
+  monto: number
+  fecha_desde: string
+  fecha_hasta: string
+  ajuste: number
+  nota: string | null
+  pagado_por: string
+  created_at: string
+}
+
 export type TipoMarcacion = 'entrada' | 'inicio_almuerzo' | 'fin_almuerzo' | 'salida'
 
 export interface Marcacion {

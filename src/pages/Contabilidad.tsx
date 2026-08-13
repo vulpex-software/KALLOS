@@ -37,6 +37,55 @@ export default function Contabilidad() {
   const [prestamosPendientes, setPrestamosPendientes] = useState<Prestamo[]>([])
   const [pagosPrestamoTodos, setPagosPrestamoTodos] = useState<PrestamoPago[]>([])
 
+  // Balance general: suma histórica de todo lo que entra vs. todo lo que
+  // sale (no depende del rango de fechas de arriba, como "Prestado
+  // pendiente"). El pago de comisión a especialistas sale DE ACÁ, no del
+  // "Salido" de Cierre de Caja -- a propósito, para no mezclarlo con el
+  // cuadre diario de caja física.
+  const [balanceEntradas, setBalanceEntradas] = useState({ cobros: 0, abonos: 0, ventas: 0, pagosPrestamo: 0 })
+  const [balanceSalidas, setBalanceSalidas] = useState({ proveedores: 0, prestado: 0, comision: 0, reembolsos: 0 })
+  useEffect(() => {
+    async function cargarBalance() {
+      const [
+        { data: cobrosData },
+        { data: abonosData },
+        { data: ventasData },
+        { data: pagosPrestamoData },
+        { data: proveedoresData },
+        { data: prestadoData },
+        { data: comisionData },
+        { data: reembolsosData }
+      ] = await Promise.all([
+        supabase.from('cobros').select('monto'),
+        supabase.from('citas').select('abono').gt('abono', 0).neq('estado', 'cancelada'),
+        supabase.from('ventas').select('total').eq('anulado', false),
+        supabase.from('prestamo_pagos').select('monto'),
+        supabase.from('cierres_caja').select('proveedor_monto'),
+        supabase.from('prestamos').select('monto').eq('tipo', 'dinero'),
+        supabase.from('comision_pagos').select('monto'),
+        supabase.from('creditos_clientes').select('monto').eq('resolucion', 'reembolso')
+      ])
+      const sum = (rows: unknown, campo: string) => ((rows as Record<string, number>[]) ?? []).reduce((s, r) => s + Number(r[campo]), 0)
+      setBalanceEntradas({
+        cobros: sum(cobrosData, 'monto'),
+        abonos: sum(abonosData, 'abono'),
+        ventas: sum(ventasData, 'total'),
+        pagosPrestamo: sum(pagosPrestamoData, 'monto')
+      })
+      setBalanceSalidas({
+        proveedores: sum(proveedoresData, 'proveedor_monto'),
+        prestado: sum(prestadoData, 'monto'),
+        comision: sum(comisionData, 'monto'),
+        reembolsos: sum(reembolsosData, 'monto')
+      })
+    }
+    cargarBalance()
+  }, [])
+
+  const totalEntradasBalance = balanceEntradas.cobros + balanceEntradas.abonos + balanceEntradas.ventas + balanceEntradas.pagosPrestamo
+  const totalSalidasBalance = balanceSalidas.proveedores + balanceSalidas.prestado + balanceSalidas.comision + balanceSalidas.reembolsos
+  const balanceGeneral = totalEntradasBalance - totalSalidasBalance
+
   useEffect(() => {
     let cancelado = false
     async function cargar() {
@@ -154,6 +203,37 @@ export default function Contabilidad() {
           <p className="text-2xl font-bold text-amber-800">{pesos(totalPrestadoPendiente)}</p>
         </div>
       )}
+
+      <div className="bg-white rounded-2xl shadow p-4 space-y-3">
+        <div>
+          <h2 className="text-sm font-semibold text-gray-600">Balance general</h2>
+          <p className="text-xs text-gray-400">Histórico completo (no depende del rango de fechas). El pago de comisión a especialistas sale de acá, no del "Salido" de Cierre de Caja.</p>
+        </div>
+        <div className="grid grid-cols-3 gap-2 text-center">
+          <div className="bg-green-50 rounded-lg py-2">
+            <p className="text-[11px] text-green-700">Entra</p>
+            <p className="text-sm font-semibold text-green-700">{pesos(totalEntradasBalance)}</p>
+          </div>
+          <div className="bg-red-50 rounded-lg py-2">
+            <p className="text-[11px] text-red-700">Sale</p>
+            <p className="text-sm font-semibold text-red-700">{pesos(totalSalidasBalance)}</p>
+          </div>
+          <div className="bg-gray-50 rounded-lg py-2">
+            <p className="text-[11px] text-gray-500">Balance</p>
+            <p className={`text-sm font-semibold ${balanceGeneral >= 0 ? 'text-brand-700' : 'text-red-600'}`}>{pesos(balanceGeneral)}</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-gray-500">
+          <span>Cobros</span><span className="text-right">{pesos(balanceEntradas.cobros)}</span>
+          <span>Abonos de citas</span><span className="text-right">{pesos(balanceEntradas.abonos)}</span>
+          <span>Ventas de vitrina</span><span className="text-right">{pesos(balanceEntradas.ventas)}</span>
+          <span>Pagos de préstamos recibidos</span><span className="text-right">{pesos(balanceEntradas.pagosPrestamo)}</span>
+          <span>Pago a proveedores</span><span className="text-right">-{pesos(balanceSalidas.proveedores)}</span>
+          <span>Préstamos dados</span><span className="text-right">-{pesos(balanceSalidas.prestado)}</span>
+          <span>Comisión pagada</span><span className="text-right">-{pesos(balanceSalidas.comision)}</span>
+          <span>Reembolsos a clientas</span><span className="text-right">-{pesos(balanceSalidas.reembolsos)}</span>
+        </div>
+      </div>
 
       {cargando ? (
         <p className="text-sm text-gray-400">Cargando…</p>

@@ -23,6 +23,26 @@ export default function MiComision() {
   const [pagos, setPagos] = useState<PrestamoPago[]>([])
   const [cargando, setCargando] = useState(true)
 
+  // Saldo pendiente histórico (todo lo ganado desde siempre menos lo ya
+  // pagado) -- independiente del período elegido arriba, que solo sirve
+  // para ver el detalle día a día.
+  const [saldoPendiente, setSaldoPendiente] = useState(0)
+  useEffect(() => {
+    if (!profile) return
+    const personaId = profile.id
+    let cancelado = false
+    Promise.all([
+      supabase.from('registros_trabajo').select('precio_cobrado').eq('empleada_id', personaId).eq('anulado', false),
+      supabase.from('comision_pagos').select('monto').eq('persona_id', personaId)
+    ]).then(([{ data: regs }, { data: pagosComision }]) => {
+      if (cancelado) return
+      const ganado = ((regs as { precio_cobrado: number }[]) ?? []).reduce((s, r) => s + Number(r.precio_cobrado), 0) * PORCENTAJE_COMISION
+      const pagado = ((pagosComision as { monto: number }[]) ?? []).reduce((s, p) => s + Number(p.monto), 0)
+      setSaldoPendiente(Math.max(0, ganado - pagado))
+    })
+    return () => { cancelado = true }
+  }, [profile])
+
   useEffect(() => {
     if (!profile) return
     const personaId = profile.id
@@ -82,6 +102,13 @@ export default function MiComision() {
   return (
     <div className="max-w-lg mx-auto p-4 space-y-4">
       <h1 className="text-lg font-semibold">Mi comisión</h1>
+
+      {saldoPendiente > 0 && (
+        <div className="bg-amber-50 border border-amber-300 rounded-2xl p-4">
+          <p className="text-xs text-amber-700">Saldo pendiente por pagarte (histórico)</p>
+          <p className="text-2xl font-bold text-amber-800">{pesos(saldoPendiente)}</p>
+        </div>
+      )}
 
       <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
         <button

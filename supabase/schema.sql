@@ -1629,6 +1629,46 @@ create trigger trg_descontar_stock_consumo_interno
   after insert on public.consumos_internos
   for each row execute function public.descontar_stock_consumo_interno();
 
+-- ---------------------------------------------------------
+-- 13. Pagos de comisión: ledger histórico de lo que ya se le pagó a cada
+--     especialista de su 50%. El "saldo pendiente" de cada quien es
+--     simplemente TODO lo ganado históricamente (50% de sus registros de
+--     trabajo, sin importar cuándo) menos la suma de estos pagos -- no hay
+--     concepto de "este rango ya quedó cerrado": fecha_desde/fecha_hasta
+--     son solo la referencia de qué período se calculó para llegar al
+--     monto (la calculadora del formulario), y ajuste anota cuánto de ese
+--     monto fue un bono (+) o un descuento (-) manual sobre lo calculado.
+-- ---------------------------------------------------------
+create table public.comision_pagos (
+  id uuid primary key default gen_random_uuid(),
+  salon_id uuid not null references public.salones(id),
+  persona_id uuid not null references public.profiles(id),
+  monto numeric(12,2) not null check (monto > 0),
+  fecha_desde date not null,
+  fecha_hasta date not null,
+  ajuste numeric(12,2) not null default 0,
+  nota text,
+  pagado_por uuid not null references public.profiles(id),
+  created_at timestamptz not null default now()
+);
+
+create index idx_comision_pagos_salon on public.comision_pagos(salon_id);
+create index idx_comision_pagos_persona on public.comision_pagos(persona_id);
+
+alter table public.comision_pagos enable row level security;
+
+-- "for all" a propósito: la dueña también puede borrar un pago mal
+-- registrado (ej. monto equivocado) -- el saldo pendiente se recalcula
+-- solo porque sale de restar la suma de esta tabla, no de un total fijo.
+create policy "super administra pagos de comision de su salon"
+  on public.comision_pagos for all
+  using (public.es_super() and salon_id = public.mi_salon())
+  with check (public.es_super() and salon_id = public.mi_salon());
+
+create policy "personal ve sus pagos de comision"
+  on public.comision_pagos for select
+  using (persona_id = auth.uid());
+
 -- =========================================================
 -- 14. Consola KALLOS: operadores de plataforma (Vulpex)
 -- Un "operador" es quien administra la PLATAFORMA (crea salones, suspende,

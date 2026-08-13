@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../contexts/AuthContext'
-import { fechaHoy as inicioDeHoy, rangoDiaUTC } from '../lib/fechas'
+import { fechaHoy as inicioDeHoy } from '../lib/fechas'
+import { calcularRangoEfectivo, type RangoEfectivo } from '../lib/cierreDia'
 import { formatearPesosInput, soloDigitos } from '../lib/pesos'
 import {
   METODOS_PAGO,
@@ -62,6 +63,21 @@ export default function CierreCaja() {
   const [reembolsosHoy, setReembolsosHoy] = useState<CreditoCliente[]>([])
   const [cierresDelDia, setCierresDelDia] = useState<CierreConAdmin[]>([])
 
+  // Rango efectivo del "día de caja" (ver src/lib/cierreDia.ts): si ya se
+  // cerró la caja de hoy, lo que se registre después ya cuenta para
+  // mañana; si ayer se cerró temprano, hoy arranca justo en ese corte, no
+  // a medianoche.
+  const [rangoEfectivo, setRangoEfectivo] = useState<RangoEfectivo | null>(null)
+  useEffect(() => {
+    let cancelado = false
+    calcularRangoEfectivo(fecha).then((r) => {
+      if (!cancelado) setRangoEfectivo(r)
+    })
+    return () => {
+      cancelado = true
+    }
+  }, [fecha])
+
   // Proveedores ya guardados en productos de vitrina, para sugerirlos como
   // autocompletar en "Pago a proveedores" -- sigue aceptando texto libre,
   // por si el pago no es de un producto (ej. servicio de aseo, arriendo).
@@ -97,11 +113,11 @@ export default function CierreCaja() {
 
   useEffect(() => {
     async function calcular() {
-      if (trabajos.length === 0) {
+      if (trabajos.length === 0 || !rangoEfectivo) {
         setResumenVisitasHoy({ cobrado: 0, pendiente: 0, condonado: 0, cobradoOtroDia: 0, detalleCobradoOtroDia: [] })
         return
       }
-      const { desde, hasta } = rangoDiaUTC(fecha)
+      const { desde, hasta } = rangoEfectivo
       const grupos = new Map<string, RegistroTrabajo[]>()
       for (const r of trabajos) {
         const clave = r.visita_id ?? r.id
@@ -150,10 +166,11 @@ export default function CierreCaja() {
       setResumenVisitasHoy({ cobrado, pendiente, condonado, cobradoOtroDia, detalleCobradoOtroDia })
     }
     calcular()
-  }, [trabajos, fecha])
+  }, [trabajos, rangoEfectivo])
 
   useEffect(() => {
-    const { desde, hasta } = rangoDiaUTC(fecha)
+    if (!rangoEfectivo) return
+    const { desde, hasta } = rangoEfectivo
     supabase
       .from('registros_trabajo')
       .select('*, servicio:servicios(*), empleada:profiles!registros_trabajo_empleada_id_fkey(*)')
@@ -200,7 +217,7 @@ export default function CierreCaja() {
       .select('*, administradora:profiles!cierres_caja_administradora_id_fkey(nombre)')
       .eq('fecha', fecha)
       .then(({ data }) => setCierresDelDia((data as CierreConAdmin[]) ?? []))
-  }, [fecha])
+  }, [rangoEfectivo, fecha])
 
   useEffect(() => {
     supabase.from('prestamos').select('*').eq('pagado', false)
@@ -333,6 +350,9 @@ export default function CierreCaja() {
         .select('*, administradora:profiles!cierres_caja_administradora_id_fkey(nombre)')
         .eq('fecha', fecha)
         .then(({ data }) => setCierresDelDia((data as CierreConAdmin[]) ?? []))
+      // Este cierre puede ser el primero del día (corta el día en dos) --
+      // recalcula el rango efectivo para reflejarlo de inmediato.
+      calcularRangoEfectivo(fecha).then(setRangoEfectivo)
     }
   }
 
@@ -358,6 +378,14 @@ export default function CierreCaja() {
           className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm"
         />
       </div>
+
+      {rangoEfectivo?.esDiferenteDelCalendario && (
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-xs text-blue-800">
+          ⏱ Este cierre cubre desde las {new Date(rangoEfectivo.desde).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Bogota' })}
+          {' '}hasta las {new Date(rangoEfectivo.hasta).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Bogota' })},
+          {' '}no el día calendario completo -- ya hubo un cierre de caja cerca de ese límite.
+        </div>
+      )}
 
       {totalPrestadoPendiente > 0 && (
         <div className="bg-amber-50 border border-amber-300 rounded-2xl p-4">

@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
+import { useAuth } from '../contexts/AuthContext'
 import { fechaHoy as hoy, haceDias, rangoUTC } from '../lib/fechas'
-import type { Cita, RegistroTrabajo } from '../types'
+import { formatearPesosInput, soloDigitos } from '../lib/pesos'
+import type { Cita, ComisionPago, RegistroTrabajo } from '../types'
 
 const PORCENTAJE_COMISION = 0.5 // a las especialistas se les paga el 50%
 
@@ -15,12 +17,146 @@ function pesos(n: number) {
 // ocultarComisiones: el sueldo/comisión de cada especialista es información
 // que solo debe ver la dueña -- un admin (Reportes) solo ve los abonos.
 export default function ComisionesAbonos({ ocultarComisiones = false }: { ocultarComisiones?: boolean }) {
+  const { profile } = useAuth()
   const [desde, setDesde] = useState(haceDias(14))
   const [hasta, setHasta] = useState(hoy())
   const [registros, setRegistros] = useState<RegistroTrabajo[]>([])
   const [abonos, setAbonos] = useState<Cita[]>([])
   const [deudas, setDeudas] = useState<Map<string, number>>(new Map())
   const [cargando, setCargando] = useState(true)
+
+  // Saldo pendiente de comisión: histórico completo (todo lo ganado desde
+  // siempre, 50% de sus registros de trabajo) menos todo lo ya pagado --
+  // no depende del rango de fechas de arriba, que es solo para las otras
+  // tablas de este componente.
+  const [historicoGanado, setHistoricoGanado] = useState<Map<string, number>>(new Map())
+  const [historicoPagado, setHistoricoPagado] = useState<Map<string, number>>(new Map())
+  const [pagosPorPersona, setPagosPorPersona] = useState<Map<string, ComisionPago[]>>(new Map())
+  const [nombrePorPersona, setNombrePorPersona] = useState<Map<string, string>>(new Map())
+
+  async function cargarHistorico() {
+    const [{ data: regsAll }, { data: pagosAll }] = await Promise.all([
+      supabase
+        .from('registros_trabajo')
+        .select('*, empleada:profiles!registros_trabajo_empleada_id_fkey(*)')
+        .eq('anulado', false),
+      supabase.from('comision_pagos').select('*').order('created_at', { ascending: false })
+    ])
+    const ganado = new Map<string, number>()
+    const nombres = new Map<string, string>()
+    for (const r of (regsAll as RegistroTrabajo[]) ?? []) {
+      ganado.set(r.empleada_id, (ganado.get(r.empleada_id) ?? 0) + Number(r.precio_cobrado) * PORCENTAJE_COMISION)
+      if (r.empleada?.nombre) nombres.set(r.empleada_id, r.empleada.nombre)
+    }
+    const pagos = (pagosAll as ComisionPago[]) ?? []
+    const pagado = new Map<string, number>()
+    const porPersona = new Map<string, ComisionPago[]>()
+    for (const p of pagos) {
+      pagado.set(p.persona_id, (pagado.get(p.persona_id) ?? 0) + Number(p.monto))
+      porPersona.set(p.persona_id, [...(porPersona.get(p.persona_id) ?? []), p])
+    }
+    setHistoricoGanado(ganado)
+    setHistoricoPagado(pagado)
+    setPagosPorPersona(porPersona)
+    setNombrePorPersona(nombres)
+  }
+
+  useEffect(() => {
+    if (!ocultarComisiones) cargarHistorico()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const saldosPendientes = useMemo(() => {
+    const ids = new Set([...historicoGanado.keys(), ...historicoPagado.keys()])
+    return [...ids]
+      .map((id) => ({
+        id,
+        nombre: nombrePorPersona.get(id) ?? 'Sin nombre',
+        pendiente: Math.max(0, (historicoGanado.get(id) ?? 0) - (historicoPagado.get(id) ?? 0))
+      }))
+      .filter((s) => s.pendiente > 0)
+      .sort((a, b) => b.pendiente - a.pendiente)
+  }, [historicoGanado, historicoPagado, nombrePorPersona])
+
+  // --- Formulario "Confirmar valor y pagar" ---
+  const [pagandoId, setPagandoId] = useState<string | null>(null)
+  const [pagoDesde, setPagoDesde] = useState(haceDias(14))
+  const [pagoHasta, setPagoHasta] = useState(hoy())
+  const [pagoRangoTotal, setPagoRangoTotal] = useState(0)
+  const [pagoCalculando, setPagoCalculando] = useState(false)
+  const [pagoAjusteSigno, setPagoAjusteSigno] = useState<'+' | '-'>('+')
+  const [pagoAjusteMonto, setPagoAjusteMonto] = useState('')
+  const [pagoNota, setPagoNota] = useState('')
+  const [guardandoPago, setGuardandoPago] = useState(false)
+  const [pagoError, setPagoError] = useState<string | null>(null)
+  const [pagoMensaje, setPagoMensaje] = useState<string | null>(null)
+  const [historialAbiertoId, setHistorialAbiertoId] = useState<string | null>(null)
+
+  async function calcularRangoParaPago(personaId: string, d: string, h: string) {
+    setPagoCalculando(true)
+    const rango = rangoUTC(d, h)
+    const { data } = await supabase
+      .from('registros_trabajo')
+      .select('precio_cobrado')
+      .eq('empleada_id', personaId)
+      .eq('anulado', false)
+      .gte('created_at', rango.desde)
+      .lt('created_at', rango.hasta)
+    const total = ((data as { precio_cobrado: number }[]) ?? []).reduce((s, r) => s + Number(r.precio_cobrado), 0) * PORCENTAJE_COMISION
+    setPagoRangoTotal(total)
+    setPagoCalculando(false)
+  }
+
+  function abrirPago(personaId: string) {
+    setPagandoId(personaId)
+    setPagoDesde(haceDias(14))
+    setPagoHasta(hoy())
+    setPagoAjusteSigno('+')
+    setPagoAjusteMonto('')
+    setPagoNota('')
+    setPagoError(null)
+    setPagoMensaje(null)
+    calcularRangoParaPago(personaId, haceDias(14), hoy())
+  }
+
+  function cambiarRangoPago(d: string, h: string) {
+    setPagoDesde(d)
+    setPagoHasta(h)
+    if (pagandoId) calcularRangoParaPago(pagandoId, d, h)
+  }
+
+  const pagoAjusteNum = Number(pagoAjusteMonto || 0) * (pagoAjusteSigno === '+' ? 1 : -1)
+  const pagoTotal = pagoRangoTotal + pagoAjusteNum
+  const pagoSaldoPersona = pagandoId ? (saldosPendientes.find((s) => s.id === pagandoId)?.pendiente ?? 0) : 0
+
+  async function confirmarPago() {
+    if (!pagandoId || !profile) return
+    setPagoError(null)
+    if (pagoTotal <= 0) { setPagoError('El total a pagar debe quedar por encima de $0.'); return }
+    if (pagoTotal > pagoSaldoPersona + 0.01) { setPagoError(`No puede ser mayor al saldo pendiente (${pesos(pagoSaldoPersona)}).`); return }
+    setGuardandoPago(true)
+    const { error } = await supabase.from('comision_pagos').insert({
+      salon_id: profile.salon_id,
+      persona_id: pagandoId,
+      monto: pagoTotal,
+      fecha_desde: pagoDesde,
+      fecha_hasta: pagoHasta,
+      ajuste: pagoAjusteNum,
+      nota: pagoNota.trim() || null,
+      pagado_por: profile.id
+    })
+    setGuardandoPago(false)
+    if (error) { setPagoError('No se pudo registrar el pago: ' + error.message); return }
+    setPagoMensaje(`Se registró el pago de ${pesos(pagoTotal)}.`)
+    setPagandoId(null)
+    cargarHistorico()
+  }
+
+  async function borrarPago(p: ComisionPago) {
+    if (!confirm(`¿Borrar este pago de ${pesos(Number(p.monto))}? No se puede deshacer.`)) return
+    await supabase.from('comision_pagos').delete().eq('id', p.id)
+    cargarHistorico()
+  }
 
   useEffect(() => {
     let cancelado = false
@@ -105,6 +241,119 @@ export default function ComisionesAbonos({ ocultarComisiones = false }: { oculta
           <button onClick={() => { setDesde(haceDias(14)); setHasta(hoy()) }} className="px-2 py-1 rounded-lg bg-brand-50 text-brand-700">Última quincena</button>
         </div>
       </div>
+
+      {!ocultarComisiones && saldosPendientes.length > 0 && (
+        <div className="bg-white rounded-2xl shadow p-4">
+          <h2 className="font-semibold text-sm text-gray-600 mb-1">Comisión pendiente por pagar</h2>
+          <p className="text-xs text-gray-400 mb-3">Histórico completo -- todo lo ganado desde siempre menos lo ya pagado, sin importar el rango de arriba.</p>
+          <ul className="divide-y divide-gray-100">
+            {saldosPendientes.map((s) => (
+              <li key={s.id} className="py-3 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm font-medium">{s.nombre}</span>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <span className="text-sm font-semibold text-amber-700">{pesos(s.pendiente)}</span>
+                    {pagandoId !== s.id && (
+                      <button onClick={() => abrirPago(s.id)} className="text-xs bg-brand-600 hover:bg-brand-700 text-white font-medium rounded-lg px-3 py-1.5">
+                        Confirmar valor y pagar
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {(pagosPorPersona.get(s.id)?.length ?? 0) > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setHistorialAbiertoId(historialAbiertoId === s.id ? null : s.id)}
+                    className="text-xs text-brand-600 font-medium"
+                  >
+                    {historialAbiertoId === s.id ? 'Ocultar pagos ▲' : `Ver pagos anteriores (${pagosPorPersona.get(s.id)?.length}) ▾`}
+                  </button>
+                )}
+                {historialAbiertoId === s.id && (
+                  <ul className="text-xs text-gray-500 space-y-1 pl-1">
+                    {(pagosPorPersona.get(s.id) ?? []).map((p) => (
+                      <li key={p.id} className="flex items-center justify-between gap-2">
+                        <span>
+                          {new Date(p.created_at).toLocaleDateString('es-CO')} · {pesos(Number(p.monto))}
+                          {' '}(del {p.fecha_desde} al {p.fecha_hasta}{Number(p.ajuste) !== 0 ? `, ${Number(p.ajuste) > 0 ? '+' : ''}${pesos(Number(p.ajuste))} ajuste` : ''})
+                          {p.nota ? ` · ${p.nota}` : ''}
+                        </span>
+                        <button onClick={() => borrarPago(p)} className="text-red-500 shrink-0">Borrar</button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                {pagandoId === s.id && (
+                  <div className="border border-brand-200 bg-brand-50/50 rounded-xl p-3 space-y-2">
+                    {pagoError && <div className="text-xs bg-red-50 text-red-700 border border-red-200 rounded-lg p-2">{pagoError}</div>}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-xs font-medium mb-1">Desde</label>
+                        <input type="date" value={pagoDesde} onChange={(e) => cambiarRangoPago(e.target.value, pagoHasta)} className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium mb-1">Hasta</label>
+                        <input type="date" value={pagoHasta} onChange={(e) => cambiarRangoPago(pagoDesde, e.target.value)} className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm" />
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      Comisión de ese rango: <b>{pagoCalculando ? 'calculando…' : pesos(pagoRangoTotal)}</b>
+                    </p>
+                    <div>
+                      <label className="block text-xs font-medium mb-1">Adicional (opcional) -- para pagarle algo de más o restarle algo</label>
+                      <div className="flex gap-2">
+                        <div className="flex rounded-lg border border-gray-300 overflow-hidden shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => setPagoAjusteSigno('+')}
+                            className={`px-3 text-sm font-bold ${pagoAjusteSigno === '+' ? 'bg-green-600 text-white' : 'bg-white text-gray-400'}`}
+                          >
+                            +
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setPagoAjusteSigno('-')}
+                            className={`px-3 text-sm font-bold border-l border-gray-300 ${pagoAjusteSigno === '-' ? 'bg-red-600 text-white' : 'bg-white text-gray-400'}`}
+                          >
+                            −
+                          </button>
+                        </div>
+                        <input
+                          type="text" inputMode="numeric"
+                          value={formatearPesosInput(pagoAjusteMonto)}
+                          onChange={(e) => setPagoAjusteMonto(soloDigitos(e.target.value))}
+                          placeholder="0"
+                          className="flex-1 rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
+                        />
+                      </div>
+                    </div>
+                    <input
+                      value={pagoNota}
+                      onChange={(e) => setPagoNota(e.target.value)}
+                      placeholder="Nota (opcional, ej. bono por puntualidad)"
+                      className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
+                    />
+                    <p className="text-sm font-semibold text-brand-700">Total a pagar: {pesos(pagoTotal)}</p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={confirmarPago}
+                        disabled={guardandoPago || pagoCalculando}
+                        className="flex-1 bg-brand-600 hover:bg-brand-700 disabled:opacity-60 text-white text-sm font-medium rounded-lg py-1.5"
+                      >
+                        {guardandoPago ? 'Guardando…' : 'Confirmar valor y pagar'}
+                      </button>
+                      <button type="button" onClick={() => setPagandoId(null)} className="px-3 text-sm text-gray-500">Cancelar</button>
+                    </div>
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {pagoMensaje && <div className="text-sm bg-green-50 text-green-700 border border-green-200 rounded-lg p-2">{pagoMensaje}</div>}
 
       {cargando ? (
         <p className="text-sm text-gray-400">Cargando…</p>

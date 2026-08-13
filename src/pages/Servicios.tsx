@@ -14,6 +14,10 @@ export default function Servicios() {
   const [nombre, setNombre] = useState('')
   const [categoria, setCategoria] = useState<string>(CATEGORIAS_SERVICIOS[0])
   const [precioNuevo, setPrecioNuevo] = useState('')
+  // Un combo suma el precio y la duración de los servicios que elijas del
+  // catálogo -- no se desglosa después, queda como un servicio normal más.
+  const esCombo = categoria === 'Combo'
+  const [comboServiciosIds, setComboServiciosIds] = useState<string[]>([])
   const [error, setError] = useState<string | null>(null)
   const [mensaje, setMensaje] = useState<string | null>(null)
 
@@ -62,6 +66,26 @@ export default function Servicios() {
     cargarObsequios()
   }
 
+  // Servicios elegibles para armar un combo: activos, sin contar los
+  // adicionales (monto libre, no tiene sentido sumarlo a un precio fijo) ni
+  // otros combos (evita anidar combos dentro de combos).
+  const serviciosParaCombo = useMemo(
+    () => servicios.filter((s) => s.activo && s.categoria !== 'Adicional' && s.categoria !== 'Combo'),
+    [servicios]
+  )
+
+  const comboTotales = useMemo(() => {
+    const elegidos = servicios.filter((s) => comboServiciosIds.includes(s.id))
+    return {
+      precio: elegidos.reduce((sum, s) => sum + Number(s.precio_base), 0),
+      duracion: elegidos.reduce((sum, s) => sum + Number(s.duracion_minutos), 0)
+    }
+  }, [servicios, comboServiciosIds])
+
+  function alternarServicioCombo(id: string) {
+    setComboServiciosIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
+  }
+
   const porCategoria = useMemo(() => {
     const mapa = new Map<string, Servicio[]>()
     for (const s of servicios) {
@@ -91,18 +115,24 @@ export default function Servicios() {
     setError(null)
     setMensaje(null)
     if (!profile) return
+    if (esCombo && comboServiciosIds.length < 2) {
+      setError('Elige al menos 2 servicios para armar el combo.')
+      return
+    }
     const { error } = await supabase.from('servicios').insert({
       salon_id: profile.salon_id,
       categoria,
       nombre,
-      precio_base: Number(precioNuevo || 0)
+      precio_base: esCombo ? comboTotales.precio : Number(precioNuevo || 0),
+      ...(esCombo ? { duracion_minutos: comboTotales.duracion } : {})
     })
     if (error) {
       setError('No se pudo crear el servicio. Revisa que no exista ya uno con el mismo nombre en esa categoría.')
     } else {
-      setMensaje('Servicio agregado.')
+      setMensaje(esCombo ? 'Combo agregado.' : 'Servicio agregado.')
       setNombre('')
       setPrecioNuevo('')
+      setComboServiciosIds([])
       cargar()
     }
   }
@@ -119,31 +149,68 @@ export default function Servicios() {
         {error && <div className="text-sm bg-red-50 text-red-700 border border-red-200 rounded-lg p-2">{error}</div>}
         {mensaje && <div className="text-sm bg-green-50 text-green-700 border border-green-200 rounded-lg p-2">{mensaje}</div>}
         <h2 className="font-semibold text-sm text-gray-600">Agregar nuevo servicio</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className={`grid grid-cols-1 ${esCombo ? '' : 'sm:grid-cols-2'} gap-3`}>
           <div>
             <label className="block text-sm font-medium mb-1">Categoría</label>
-            <select value={categoria} onChange={(e) => setCategoria(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2">
+            <select
+              value={categoria}
+              onChange={(e) => { setCategoria(e.target.value); setComboServiciosIds([]) }}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2"
+            >
               {CATEGORIAS_SERVICIOS.map((c) => (
                 <option key={c} value={c}>{c}</option>
               ))}
             </select>
           </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Precio</label>
-            <input
-              type="text" inputMode="numeric"
-              value={formatearPesosInput(precioNuevo)}
-              onChange={(e) => setPrecioNuevo(soloDigitos(e.target.value))}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2"
-            />
-          </div>
+          {!esCombo && (
+            <div>
+              <label className="block text-sm font-medium mb-1">Precio</label>
+              <input
+                type="text" inputMode="numeric"
+                value={formatearPesosInput(precioNuevo)}
+                onChange={(e) => setPrecioNuevo(soloDigitos(e.target.value))}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2"
+              />
+            </div>
+          )}
         </div>
+
+        {esCombo && (
+          <div>
+            <label className="block text-sm font-medium mb-1">Servicios que incluye el combo</label>
+            {serviciosParaCombo.length === 0 ? (
+              <p className="text-xs text-gray-400">No hay servicios activos para combinar todavía.</p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {serviciosParaCombo.map((s) => {
+                  const activo = comboServiciosIds.includes(s.id)
+                  return (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => alternarServicioCombo(s.id)}
+                      className={`text-xs px-2 py-1 rounded-full border ${activo ? 'bg-brand-100 border-brand-300 text-brand-700' : 'bg-white border-gray-200 text-gray-400'}`}
+                    >
+                      {activo ? '✓ ' : ''}{s.nombre} (${Number(s.precio_base).toLocaleString('es-CO')})
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+            {comboServiciosIds.length > 0 && (
+              <p className="text-xs text-gray-500 mt-2">
+                Precio del combo: <b>${comboTotales.precio.toLocaleString('es-CO')}</b> · Duración: <b>{comboTotales.duracion} min</b>
+              </p>
+            )}
+          </div>
+        )}
+
         <div>
-          <label className="block text-sm font-medium mb-1">Nombre del servicio</label>
+          <label className="block text-sm font-medium mb-1">Nombre del {esCombo ? 'combo' : 'servicio'}</label>
           <input required value={nombre} onChange={(e) => setNombre(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2" />
         </div>
         <button type="submit" className="w-full bg-brand-600 hover:bg-brand-700 text-white font-medium rounded-lg py-2 transition">
-          Agregar servicio
+          Agregar {esCombo ? 'combo' : 'servicio'}
         </button>
       </form>
 
