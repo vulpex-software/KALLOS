@@ -28,6 +28,19 @@ export default function Permisos() {
   const [error, setError] = useState<string | null>(null)
   const [mensaje, setMensaje] = useState<string | null>(null)
 
+  // Editar/borrar un permiso ya registrado -- solo la dueña, para corregir
+  // uno mal puesto desde el inicio (persona equivocada, fechas mal escritas...).
+  const [editandoId, setEditandoId] = useState<string | null>(null)
+  const [eTipo, setETipo] = useState<'permiso' | 'descanso'>('permiso')
+  const [eEstado, setEEstado] = useState<EstadoPermiso>('pendiente')
+  const [eDesde, setEDesde] = useState('')
+  const [eHasta, setEHasta] = useState('')
+  const [eHoraDesde, setEHoraDesde] = useState('')
+  const [eHoraHasta, setEHoraHasta] = useState('')
+  const [eMotivo, setEMotivo] = useState('')
+  const [guardandoEdicion, setGuardandoEdicion] = useState(false)
+  const [edicionError, setEdicionError] = useState<string | null>(null)
+
   async function cargar() {
     const { data } = await supabase
       .from('permisos')
@@ -79,6 +92,44 @@ export default function Permisos() {
 
   async function resolver(id: string, estado: EstadoPermiso) {
     await supabase.from('permisos').update({ estado }).eq('id', id)
+    cargar()
+  }
+
+  function abrirEditar(p: Permiso) {
+    if (editandoId === p.id) { setEditandoId(null); return }
+    setEditandoId(p.id)
+    setETipo(p.tipo)
+    setEEstado(p.estado)
+    setEDesde(p.fecha_desde)
+    setEHasta(p.fecha_hasta)
+    setEHoraDesde(p.hora_desde?.slice(0, 5) ?? '')
+    setEHoraHasta(p.hora_hasta?.slice(0, 5) ?? '')
+    setEMotivo(p.motivo ?? '')
+    setEdicionError(null)
+  }
+
+  async function guardarEdicion(id: string) {
+    setEdicionError(null)
+    if (eHasta < eDesde) { setEdicionError('La fecha final no puede ser antes de la inicial.'); return }
+    setGuardandoEdicion(true)
+    const { error } = await supabase.from('permisos').update({
+      tipo: eTipo,
+      estado: eEstado,
+      fecha_desde: eDesde,
+      fecha_hasta: eHasta,
+      hora_desde: eHoraDesde || null,
+      hora_hasta: eHoraHasta || null,
+      motivo: eMotivo.trim() || null
+    }).eq('id', id)
+    setGuardandoEdicion(false)
+    if (error) { setEdicionError('No se pudo guardar: ' + error.message); return }
+    setEditandoId(null)
+    cargar()
+  }
+
+  async function borrarPermiso(p: Permiso) {
+    if (!confirm(`¿Borrar este ${p.tipo === 'descanso' ? 'descanso' : 'permiso'} de ${p.persona?.nombre ?? 'esta persona'}? No se puede deshacer.`)) return
+    await supabase.from('permisos').delete().eq('id', p.id)
     cargar()
   }
 
@@ -185,10 +236,62 @@ export default function Permisos() {
                 {p.hora_desde ? ` · ${p.hora_desde.slice(0, 5)}${p.hora_hasta ? ' a ' + p.hora_hasta.slice(0, 5) : ''}` : ''}
                 {p.motivo ? ` · ${p.motivo}` : ''}
               </p>
-              {esSuper && p.estado === 'pendiente' && (
+              {esSuper && (
                 <div className="flex gap-3 mt-2">
-                  <button onClick={() => resolver(p.id, 'aprobado')} className="text-xs text-green-700 underline">Aprobar</button>
-                  <button onClick={() => resolver(p.id, 'rechazado')} className="text-xs text-red-600 underline">Rechazar</button>
+                  {p.estado === 'pendiente' && (
+                    <>
+                      <button onClick={() => resolver(p.id, 'aprobado')} className="text-xs text-green-700 underline">Aprobar</button>
+                      <button onClick={() => resolver(p.id, 'rechazado')} className="text-xs text-red-600 underline">Rechazar</button>
+                    </>
+                  )}
+                  <button onClick={() => abrirEditar(p)} className="text-xs text-brand-600 underline">
+                    {editandoId === p.id ? 'Cerrar' : 'Editar'}
+                  </button>
+                  <button onClick={() => borrarPermiso(p)} className="text-xs text-red-500 underline">Borrar</button>
+                </div>
+              )}
+
+              {editandoId === p.id && (
+                <div className="mt-3 border-t border-gray-100 pt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {edicionError && <div className="sm:col-span-2 text-xs bg-red-50 text-red-700 border border-red-200 rounded-lg p-2">{edicionError}</div>}
+                  <label className="text-xs text-gray-500">Tipo
+                    <select value={eTipo} onChange={(e) => setETipo(e.target.value as 'permiso' | 'descanso')} className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm">
+                      <option value="descanso">Día de descanso</option>
+                      <option value="permiso">Permiso</option>
+                    </select>
+                  </label>
+                  <label className="text-xs text-gray-500">Estado
+                    <select value={eEstado} onChange={(e) => setEEstado(e.target.value as EstadoPermiso)} className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm">
+                      <option value="pendiente">Pendiente</option>
+                      <option value="aprobado">Aprobado</option>
+                      <option value="rechazado">Rechazado</option>
+                    </select>
+                  </label>
+                  <label className="text-xs text-gray-500">Desde
+                    <input type="date" value={eDesde} onChange={(e) => setEDesde(e.target.value)} className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm" />
+                  </label>
+                  <label className="text-xs text-gray-500">Hasta
+                    <input type="date" value={eHasta} onChange={(e) => setEHasta(e.target.value)} className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm" />
+                  </label>
+                  <label className="text-xs text-gray-500">Hora desde
+                    <input type="time" value={eHoraDesde} onChange={(e) => setEHoraDesde(e.target.value)} className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm" />
+                  </label>
+                  <label className="text-xs text-gray-500">Hora hasta
+                    <input type="time" value={eHoraHasta} onChange={(e) => setEHoraHasta(e.target.value)} className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm" />
+                  </label>
+                  <input
+                    value={eMotivo}
+                    onChange={(e) => setEMotivo(e.target.value)}
+                    placeholder="Motivo (opcional)"
+                    className="sm:col-span-2 rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
+                  />
+                  <button
+                    onClick={() => guardarEdicion(p.id)}
+                    disabled={guardandoEdicion}
+                    className="sm:col-span-2 bg-brand-600 hover:bg-brand-700 disabled:opacity-60 text-white text-sm font-medium rounded-lg py-1.5"
+                  >
+                    {guardandoEdicion ? 'Guardando…' : 'Guardar cambios'}
+                  </button>
                 </div>
               )}
             </li>

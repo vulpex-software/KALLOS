@@ -815,6 +815,12 @@ create policy "super gestiona permisos de su salon"
   using (public.es_super() and salon_id = public.mi_salon())
   with check (public.es_super() and salon_id = public.mi_salon());
 
+-- Borrar un permiso/descanso mal registrado (ej. para la persona
+-- equivocada o con datos mal puestos desde el inicio).
+create policy "super borra permisos de su salon"
+  on public.permisos for delete
+  using (public.es_super() and salon_id = public.mi_salon());
+
 -- ---------------------------------------------------------
 -- 5d. Préstamos / insumos fiados a cada persona
 -- ---------------------------------------------------------
