@@ -383,9 +383,9 @@
       <div class="table-wrap"><table class="field-table">
         <thead><tr><th>Campo</th><th>Para qué sirve</th></tr></thead>
         <tbody>
-          <tr><td>Usuario o correo</td><td>Si el personal/dueña entra con un nombre corto (ej. <code>norma</code>), el sistema lo completa por dentro como <code>norma@cuentas.kallos.app</code>. Las clientas que se registraron con cédula entran con su número de cédula.</td></tr>
-          <tr><td>Contraseña</td><td>La que le asignaron al crear la cuenta (o su cédula, si es clienta registrada por sí misma).</td></tr>
-          <tr><td>"Crea tu cuenta"</td><td>Enlace solo para clientas nuevas — lleva al registro con cédula (ver sección Clienta).</td></tr>
+          <tr><td>Usuario o correo</td><td>Si el personal/dueña entra con un nombre corto (ej. <code>norma</code>), el sistema lo completa por dentro como <code>norma@cuentas.kallos.app</code>. Las clientas entran con su usuario (por defecto, su teléfono).</td></tr>
+          <tr><td>Contraseña</td><td>La que le asignaron al crear la cuenta (o su teléfono, si es clienta registrada por sí misma y no la cambió).</td></tr>
+          <tr><td>"Crea tu cuenta"</td><td>Enlace solo para clientas nuevas — lleva al registro por teléfono (ver sección Clienta).</td></tr>
         </tbody>
       </table></div>
       <div class="callout warn"><b>Si el usuario o la contraseña no funcionan</b>, cualquier cuenta puede recuperarlos pidiéndoselo a la dueña — ella se los cambia desde Usuarios → "Usuario / contraseña" sin necesitar el correo antiguo.</div>
@@ -495,6 +495,7 @@
     <div class="page-block" id="sa-cierre" data-role="superadmin">
       <div class="page-head"><h3>Cierre de caja</h3> <code class="route">/cierre-caja</code> <span style="font-size:11px;color:var(--neutral);">— también la ve Admin</span></div>
       <p class="lede"><b>Admin</b> llena el formulario al final del día. <b>Super Admin</b> ve además el reporte de lo ya cerrado, con las diferencias por medio de pago ya calculadas — y también puede llenar su propio cierre (de hoy o de una fecha atrasada), por ejemplo si tomó la caja ella misma o para corregir uno mal hecho.</p>
+      <div class="callout info">El "día de caja" no siempre es el día calendario completo: si ya se cerró la caja de hoy, lo que se cobre/venda/preste después de ese cierre (aunque sea el mismo día) cuenta para el cierre de <b>mañana</b> — y si ayer se cerró temprano, hoy arranca justo en ese corte, no a medianoche. Cuando esto aplica, aparece un aviso arriba con las horas exactas del rango que cubre ese cierre.</div>
       <div class="mock-grid2" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;max-width:640px;">
         <div class="mock">
           <div class="mock-bar">formulario — lo llenan ambos roles</div>
@@ -572,10 +573,10 @@
           <tr><td>Profesional (opcional)</td><td>Se puede dejar sin asignar y asignarla después desde la misma tarjeta de la cita — el selector dice "Asignar profesional" si no hay nadie, o "Cambiar profesional" (con la actual preseleccionada) si ya hay alguien. Se puede reasignar en cualquier momento mientras la cita no esté Completada ni Cancelada.</td></tr>
           <tr><td>Servicios</td><td>Se agregan uno o varios con "Agregar"; si eliges "Adicional", aparecen los campos "¿Qué es el adicional?" y "Valor" para un concepto libre (ej. Mariposa, $15.000).</td></tr>
           <tr><td>Fecha / Hora inicio / Hora término</td><td>La hora de <b>inicio</b> debe estar entre 9:00am y 8:00pm; la hora de <b>término</b> sí puede pasar de las 8pm si el servicio se extiende.</td></tr>
-          <tr><td>Buscar clienta</td><td>Busca por nombre o cédula entre clientas ya registradas y las trae con un clic.</td></tr>
-          <tr><td>Clienta / Cédula / Teléfono</td><td>Si la clienta no existe, se escribe aquí y aparece "Crear clienta con esta cédula" (su cuenta queda con la cédula como usuario y contraseña).</td></tr>
+          <tr><td>Buscar clienta</td><td>Busca por nombre o teléfono entre clientas ya registradas y las trae con un clic.</td></tr>
+          <tr><td>Clienta / Teléfono</td><td>Si la clienta no existe, se escribe aquí — al guardar la cita, su cuenta se crea sola (usuario y contraseña = su teléfono), sin botón aparte y sin pedir cédula. Sin teléfono no se le puede crear cuenta: la cita queda igual, solo que el nombre queda como texto libre (ella no podrá entrar a ver su cita).</td></tr>
           <tr><td>Abono / Medio de pago / Foto del comprobante</td><td>Si se registra un abono, el medio de pago y la foto del comprobante se vuelven obligatorios (misma regla que en el portal de la clienta).</td></tr>
-          <tr><td>Obsequio</td><td>Cortesía opcional para ofrecerle a la clienta, según disponibilidad.</td></tr>
+          <tr><td>Obsequios</td><td>Cortesías opcionales para ofrecerle a la clienta, según disponibilidad — se pueden elegir varias a la vez (antes era solo una).</td></tr>
           <tr><td>📌 Nota interna (opcional)</td><td>Un mensaje solo para la profesional asignada — la clienta nunca lo ve. Sirve para dejarle una recomendación o instrucción puntual sobre esa cita (ej. "pedirle que traiga foto de referencia del diseño").</td></tr>
         </tbody>
       </table></div>
@@ -584,7 +585,7 @@
         <thead><tr><th>Campo</th><th>Para qué sirve</th></tr></thead>
         <tbody>
           <tr><td>Fecha / Hora inicio / Hora término</td><td>Ajustables antes de confirmar o al reprogramar una cita ya confirmada.</td></tr>
-          <tr><td>Obsequio</td><td>Se puede definir o cambiar en este mismo paso.</td></tr>
+          <tr><td>Obsequios</td><td>Se pueden definir o cambiar en este mismo paso (varios a la vez).</td></tr>
           <tr><td>📌 Nota interna (opcional)</td><td>Se puede escribir o cambiar en cualquier momento, sin importar el estado de la cita — a diferencia del resto de los datos, esta nota nunca se congela al confirmarse.</td></tr>
           <tr><td>Vista previa del mensaje</td><td>Muestra exactamente el texto que se enviará por WhatsApp, ya actualizado con los cambios, antes de guardar.</td></tr>
           <tr><td>"Confirmar y abrir WhatsApp" / "Guardar cambio y abrir WhatsApp"</td><td>Guarda los cambios y abre WhatsApp con el mensaje listo para enviar al número de la clienta.</td></tr>
@@ -635,6 +636,7 @@
           <tr><td>Hora desde / Hora hasta (opcional)</td><td>Si es solo por unas horas del día, no el día completo.</td></tr>
           <tr><td>Motivo</td><td>Obligatorio cuando el Personal o el Admin solicitan para sí mismos (la solicitud queda pendiente y la dueña necesita saber por qué); opcional cuando la dueña lo registra ella misma, para sí o para otra persona.</td></tr>
           <tr><td>Aprobar / Rechazar <span style="color:var(--neutral);">(solo Super Admin)</span></td><td>Resuelve las solicitudes pendientes que envía el personal.</td></tr>
+          <tr><td>Editar / Borrar <span style="color:var(--neutral);">(solo Super Admin)</span></td><td>Corrige un permiso ya registrado (persona equivocada, fechas mal puestas…) sin importar su estado, o lo borra por completo si no debió existir.</td></tr>
         </tbody>
       </table></div>
       <div class="callout info">Cuando el <b>personal</b> o el <b>admin</b> solicitan un permiso para sí mismos, queda <b>pendiente</b> hasta que la dueña lo apruebe o rechace. Cuando la <b>dueña</b> lo registra, queda aprobado automáticamente.</div>
@@ -663,6 +665,7 @@
         <tbody>
           <tr><td>Desde / Hasta + atajos</td><td>Rango de fechas a analizar; "Última semana" y "Último mes" lo llenan solos.</td></tr>
           <tr><td>Prestado (pendiente de pago)</td><td>Aviso persistente, no depende del rango: cuánto deben en total las profesionales.</td></tr>
+          <tr><td>Balance general</td><td>Histórico completo (tampoco depende del rango): suma de todo lo que ha entrado (cobros, abonos, ventas, pagos de préstamos recibidos) menos todo lo que ha salido (pago a proveedores, préstamos dados, <b>comisión pagada</b> y reembolsos a clientas). La comisión que se le paga a las especialistas sale de acá, no del "Salido" del Cierre de Caja — se mantienen separados a propósito, para no mezclar el pago de comisión con el cuadre diario de caja física.</td></tr>
           <tr><td>Recaudado (trabajado)</td><td>Valor de los servicios prestados + ventas en el rango — misma base sobre la que se calcula la comisión.</td></tr>
           <tr><td>Salidas</td><td>Pago a proveedores + préstamos de dinero dados en el rango.</td></tr>
           <tr><td>Pago a empleados (50%)</td><td>El 50% del valor de los servicios prestados en el rango.</td></tr>
@@ -670,11 +673,13 @@
           <tr><td>Cobrado en caja</td><td>Bloque aparte, solo de referencia: cuánto dinero entró <i>físicamente</i> (cobros + abonos + ventas). Puede no ser igual al Recaudado si algo de esta semana sigue pendiente de cobro, o si un abono cobrado ahora es de una cita de otra fecha.</td></tr>
         </tbody>
       </table></div>
-      <p style="font-size:13px;font-weight:700;margin:14px 0 4px;">Subpestaña "Comisiones y abonos" <span style="color:var(--neutral);font-weight:400;">(la misma información que ve el Admin en "Reportes")</span></p>
+      <p style="font-size:13px;font-weight:700;margin:14px 0 4px;">Subpestaña "Comisiones y abonos" <span style="color:var(--neutral);font-weight:400;">(la misma información que ve el Admin en "Reportes", salvo el pago)</span></p>
       <div class="table-wrap"><table class="field-table">
         <thead><tr><th>Columna / Campo</th><th>Para qué sirve</th></tr></thead>
         <tbody>
-          <tr><td>Tabla de comisiones</td><td>Por cada especialista: cantidad de servicios, 50% de comisión, cuánto Debe (de préstamos pendientes) y cuánto Le pagas en definitiva (comisión menos deuda).</td></tr>
+          <tr><td>Tabla de comisiones</td><td>Por cada especialista, del rango elegido: cantidad de servicios, 50% de comisión, cuánto Debe (de préstamos pendientes) y cuánto Le pagas en definitiva (comisión menos deuda). Es solo de referencia para el rango — el saldo real que se le debe está en "Comisión pendiente por pagar", abajo.</td></tr>
+          <tr><td>Comisión pendiente por pagar</td><td>Histórico completo por especialista (todo lo ganado desde siempre menos todo lo ya pagado) — no depende del rango de arriba. "Ver pagos anteriores ▾" muestra el historial de esa persona, cada uno con opción de "Borrar" (por si se registró mal).</td></tr>
+          <tr><td>"Confirmar valor y pagar"</td><td>Abre el formulario de pago: elige Desde/Hasta y el sistema suma sola la comisión de ese rango; el campo "Adicional" (con los botones + / −) deja sumarle o restarle algo manual sobre ese cálculo (ej. un bono, o descontar algo). Abajo se ve el "Total a pagar" antes de confirmar — nunca deja pagar más de lo que realmente se debe en total.</td></tr>
           <tr><td>Abonos registrados</td><td>Lista de cada abono de cita en el rango: clienta, servicio, fecha, medio de pago y estado de la cita, con el total sumado arriba.</td></tr>
         </tbody>
       </table></div>
@@ -704,7 +709,7 @@
       <div class="table-wrap"><table class="field-table">
         <thead><tr><th>Campo</th><th>Para qué sirve</th></tr></thead>
         <tbody>
-          <tr><td>Vitrina</td><td>El producto tiene precio y <b>genera deuda</b> (como un fiado de verdad) — descuenta el stock de Inventario → Vitrina automáticamente.</td></tr>
+          <tr><td>Vitrina</td><td>El producto tiene precio y <b>genera deuda</b> (como un fiado de verdad) — descuenta el stock de Inventario → Vitrina automáticamente. No pide medio de pago al asignarlo (eso se pregunta después, al registrar el pago de la deuda).</td></tr>
           <tr><td>Interno</td><td>Insumo de uso profesional (bases, esmaltes…) que se le <b>asigna</b> a la profesional sin costo ni deuda — monto queda en $0, solo descuenta el stock de Inventario → Interno como constancia de qué se le entregó.</td></tr>
           <tr><td>Producto</td><td>Se elige del inventario correspondiente (Vitrina o Interno); no puede pedirse más cantidad de la que hay en stock.</td></tr>
         </tbody>
@@ -735,6 +740,7 @@
         <thead><tr><th>Campo</th><th>Para qué sirve</th></tr></thead>
         <tbody>
           <tr><td>Nombre / Descripción</td><td>Identifican el producto.</td></tr>
+          <tr><td>Marca / Proveedor (opcionales)</td><td>Quedan guardados con el producto; el proveedor se sugiere solo después como autocompletar en "Pago a proveedores" del Cierre de Caja, para no volver a escribirlo cada vez (sigue aceptando texto libre si el pago no es de un producto).</td></tr>
           <tr><td>Precio de venta</td><td>Lo que paga quien lo compra.</td></tr>
           <tr><td>Costo (opcional)</td><td>Lo que le cuesta a ti — sirve para calcular el "costo de mercancía vendida" en Contabilidad.</td></tr>
           <tr><td>Stock inicial / Stock</td><td>Unidades disponibles; se edita en línea con su botón "Guardar" propio. Lo descuentan solas las Ventas y los fiados de Insumos → Vitrina en Préstamos.</td></tr>
@@ -759,11 +765,13 @@
 
     <div class="page-block" id="sa-historial" data-role="superadmin">
       <div class="page-head"><h3>Historial</h3> <code class="route">/historial</code> <span style="font-size:11px;color:var(--neutral);">— solo Super Admin</span></div>
-      <p class="lede">Buscador de todas las atenciones hechas (hasta las últimas 300), con sus fotos de evidencia.</p>
+      <p class="lede">Buscador de todas las atenciones hechas (hasta las últimas 300 si no filtras por fecha), con sus fotos de evidencia.</p>
       <div class="table-wrap"><table class="field-table">
         <thead><tr><th>Campo</th><th>Para qué sirve</th></tr></thead>
         <tbody>
-          <tr><td>Buscar por clienta o servicio</td><td>Filtra la lista en vivo.</td></tr>
+          <tr><td>Buscar por clienta o servicio</td><td>Filtra la lista en vivo. Si el filtro deja viendo a una sola clienta, arriba de la lista aparece el total de todo lo que se le ha hecho (suma de esas atenciones).</td></tr>
+          <tr><td>Selector de fecha</td><td>Filtra a un solo día (sin fecha elegida, ve las últimas 300 sin importar cuándo).</td></tr>
+          <tr><td>Concepto del adicional</td><td>Cuando el servicio fue "Adicional", la fila muestra el concepto que se escribió al registrarlo (ej. "Adicional · rosa 3D"), no solo la palabra "Adicional".</td></tr>
           <tr><td>"Ver foto"</td><td>Abre la foto del trabajo terminado en una pestaña nueva.</td></tr>
         </tbody>
       </table></div>
@@ -809,8 +817,22 @@
         <thead><tr><th>Campo</th><th>Para qué sirve</th></tr></thead>
         <tbody>
           <tr><td>Nombre</td><td>Nombre con el que aparecerá en toda la app.</td></tr>
-          <tr><td>Rol</td><td>Clienta, Personal (profesional), Admin, o Super Admin (Dueña).</td></tr>
-          <tr><td>Usuario o correo</td><td>Si escribes solo un nombre (sin @), entrará escribiendo ese nombre como usuario; para una clienta con correo real, se pone completo.</td></tr>
+          <tr><td>Rol</td><td>Clienta, Personal (profesional), Admin, o Super Admin (Dueña) — el formulario cambia según cuál elijas.</td></tr>
+        </tbody>
+      </table></div>
+      <p style="font-size:13px;font-weight:700;margin:14px 0 4px;">Si el rol es "Clienta"</p>
+      <div class="table-wrap"><table class="field-table">
+        <thead><tr><th>Campo</th><th>Para qué sirve</th></tr></thead>
+        <tbody>
+          <tr><td>Apellido</td><td>Junto con Nombre, la identifican en la app.</td></tr>
+          <tr><td>Teléfono</td><td>Obligatorio para clientas: se vuelve su usuario y su contraseña para entrar (ella los puede cambiar después, o tú desde "Usuario / contraseña"). No hace falta pedir cédula.</td></tr>
+        </tbody>
+      </table></div>
+      <p style="font-size:13px;font-weight:700;margin:14px 0 4px;">Si el rol es Personal, Admin o Super Admin</p>
+      <div class="table-wrap"><table class="field-table">
+        <thead><tr><th>Campo</th><th>Para qué sirve</th></tr></thead>
+        <tbody>
+          <tr><td>Usuario o correo</td><td>Si escribes solo un nombre (sin @), entrará escribiendo ese nombre como usuario.</td></tr>
           <tr><td>Contraseña</td><td>Mínimo 6 caracteres.</td></tr>
           <tr><td>Teléfono (opcional)</td><td>Para contacto/WhatsApp.</td></tr>
         </tbody>
@@ -836,13 +858,14 @@
         <thead><tr><th>Campo</th><th>Para qué sirve</th></tr></thead>
         <tbody>
           <tr><td>Agregar nuevo servicio</td><td>Categoría, precio y nombre — no puede repetirse el mismo nombre dentro de la misma categoría.</td></tr>
+          <tr><td>Categoría "Combo"</td><td>En vez de escribir un precio, se eligen varios servicios ya existentes del catálogo (con checkboxes) y el precio y la duración del combo se suman solos. El combo queda como un servicio normal más — al usarlo no se desglosa en los servicios que lo componen.</td></tr>
           <tr><td>Precio (por servicio existente)</td><td>Editable en cualquier momento; el cambio solo aplica a los trabajos que se registren de ahí en adelante, no cambia el histórico.</td></tr>
           <tr><td>Activo / Inactivo</td><td>Un servicio inactivo deja de ofrecerse (aparece tachado) sin borrar su historial.</td></tr>
           <tr><td>Obsequios — agregar</td><td>Nombre de la cortesía nueva (ej. "Baño de burbujas"); se suma a la lista que aparece al agendar/confirmar una cita.</td></tr>
           <tr><td>Obsequios — activo/inactivo</td><td>Oculta un obsequio de la lista sin borrarlo del historial de citas que ya lo usaron.</td></tr>
         </tbody>
       </table></div>
-      <div class="callout info">Las categorías actuales son: Manicure, Sistemas/Extensiones, Mantenimientos, Retiros y Reparaciones, Pedicura, Pestañas, Retoque de Pestañas, Depilación, Cejas, y Adicional (el de monto y concepto libre).</div>
+      <div class="callout info">Las categorías actuales son: Manicure, Sistemas/Extensiones, Mantenimientos, Retiros y Reparaciones, Pedicura, Pestañas, Retoque de Pestañas, Depilación, Cejas, Adicional (monto y concepto libre) y Combo.</div>
     </div>
 
     <!-- ======================= ADMIN ======================= -->
@@ -964,6 +987,7 @@
     <div class="page-block" id="pe-comision" data-role="personal">
       <div class="page-head"><h3>Mi comisión</h3> <code class="route">/mi-comision</code></div>
       <p class="lede">Autoconsulta de lo que ganó por su propio trabajo — la misma cuenta que hace la dueña en Contabilidad, pero solo con sus propios datos.</p>
+      <div class="callout info">Arriba de todo, si aplica, aparece el <b>saldo pendiente por pagarte</b> — el histórico completo (todo lo ganado desde siempre menos lo que la dueña ya te ha pagado), sin importar el período que elijas abajo.</div>
       <div class="mock">
         <div class="mock-bar">/mi-comision</div>
         <div class="mock-body">
@@ -1005,21 +1029,22 @@
     <!-- ======================= CLIENTE ======================= -->
     <div class="role-section" id="cliente" data-role="cliente">
       <h2>Clienta <span class="role-tag tag-cliente">agenda su propia cita</span></h2>
-      <p class="role-intro">Se crea su propia cuenta con su cédula y desde ahí solicita citas — el salón las revisa y confirma. Es el único rol que no entra al resto del sistema, solo a su Portal.</p>
+      <p class="role-intro">Se crea su propia cuenta con su teléfono y desde ahí solicita citas — el salón las revisa y confirma. Es el único rol que no entra al resto del sistema, solo a su Portal.</p>
     </div>
 
     <div class="page-block" id="cl-registro" data-role="cliente">
       <div class="page-head"><h3>Crear cuenta</h3> <code class="route">/registro-cliente</code></div>
-      <p class="lede">Registro público, sin necesitar que nadie del salón la cree primero.</p>
+      <p class="lede">Registro público, sin necesitar que nadie del salón la cree primero. Si llega desde el link genérico de Login (sin el link específico de su salón), primero le toca buscar y elegir su salón por nombre.</p>
       <div class="table-wrap"><table class="field-table">
         <thead><tr><th>Campo</th><th>Para qué sirve</th></tr></thead>
         <tbody>
-          <tr><td>Nombre completo</td><td>Con el que quedará identificada en el sistema.</td></tr>
-          <tr><td>Cédula (NUIP / CC)</td><td>Se vuelve su usuario Y su contraseña — fácil de recordar, mínimo 6 dígitos.</td></tr>
-          <tr><td>Teléfono (WhatsApp)</td><td>Para que el salón le envíe la confirmación de sus citas.</td></tr>
+          <tr><td>Nombre / Apellido</td><td>Con los que quedará identificada en el sistema.</td></tr>
+          <tr><td>Teléfono (WhatsApp)</td><td>Para que el salón le envíe la confirmación de sus citas. También se usa para su acceso (ver abajo).</td></tr>
+          <tr><td>Usuario</td><td>Se llena solo con el teléfono, pero se puede cambiar por otra cosa si prefiere.</td></tr>
+          <tr><td>Contraseña</td><td>También se llena sola con el teléfono (mínimo 6 caracteres) — se puede cambiar por una propia.</td></tr>
         </tbody>
       </table></div>
-      <div class="callout good">Si la cédula ya tiene cuenta, el sistema lo avisa y sugiere iniciar sesión en vez de crear una nueva.</div>
+      <div class="callout good">Si el usuario ya tiene cuenta, el sistema lo avisa y sugiere iniciar sesión en vez de crear una nueva.</div>
     </div>
 
     <div class="page-block" id="cl-portal" data-role="cliente">
@@ -1076,7 +1101,7 @@
         <dt>Obsequio</dt><dd>Cortesía opcional (ej. un masaje corto) que se puede ofrecer al agendar o confirmar una cita.</dd>
         <dt>Reprogramación</dt><dd>Cuando una cita YA confirmada cambia de fecha/hora; queda marcada y avisa en la campanita hasta que alguien la revise.</dd>
         <dt>Auditoría</dt><dd>Registro automático de quién creó o modificó cada dato importante del sistema, y cuándo.</dd>
-        <dt>Campanita 🔔</dt><dd>Aviso en la barra superior. Para Admin/Super Admin muestra las citas pendientes de confirmar y las reprogramadas sin revisar. Para Personal muestra sus propias citas asignadas de hoy — es solo informativa, sin botones de confirmar ni reprogramar.</dd>
+        <dt>Campanita 🔔</dt><dd>Aviso en la barra superior. Para Admin/Super Admin muestra las citas pendientes de confirmar, las reprogramadas sin revisar, y los cumpleaños del personal que caen mañana (según su fecha de nacimiento en Usuarios). Para Personal muestra sus propias citas asignadas de hoy — es solo informativa, sin botones de confirmar ni reprogramar.</dd>
         <dt>Nota interna 📌</dt><dd>Mensaje opcional que la dueña o el admin escriben al agendar o confirmar una cita, visible solo para la profesional asignada (por push y en su campanita) — la clienta nunca la ve.</dd>
         <dt>Notificación push</dt><dd>Aviso tipo celular/navegador que le llega a la profesional cuando se le asigna una cita, incluso sin tener la app abierta. Requiere haber aceptado el permiso de notificaciones la primera vez que entró.</dd>
       </dl>
