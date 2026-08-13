@@ -466,7 +466,8 @@ create table public.citas (
   -- Saldo/excedente cobrado al completar la cita (además del abono).
   saldo_pagado numeric(12,2) not null default 0,
   saldo_metodo_pago text check (saldo_metodo_pago is null or saldo_metodo_pago in ('efectivo', 'nequi', 'daviplata', 'datafono', 'bre_b')),
-  obsequio text,
+  -- Una cita puede tener varios obsequios/cortesías a la vez.
+  obsequios text[] not null default '{}',
   nota text,
   -- Nota privada de la dueña/admin para la profesional asignada (recomendaciones,
   -- indicaciones especiales). Nunca se le muestra a la clienta.
@@ -584,7 +585,7 @@ begin
        or new.abono is distinct from old.abono
        or new.abono_metodo_pago is distinct from old.abono_metodo_pago
        or (new.abono_foto_url is distinct from old.abono_foto_url and new.abono_foto_url is not null)
-       or new.obsequio is distinct from old.obsequio
+       or new.obsequios is distinct from old.obsequios
        or new.nota is distinct from old.nota
        or new.adicional_concepto is distinct from old.adicional_concepto
        or new.adicional_valor is distinct from old.adicional_valor

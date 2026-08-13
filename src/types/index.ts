@@ -250,7 +250,7 @@ export interface Cita {
   abono_foto_url: string | null
   saldo_pagado: number
   saldo_metodo_pago: MetodoPago | null
-  obsequio: string | null
+  obsequios: string[]
   nota: string | null
   nota_interna: string | null
   adicional_concepto: string | null

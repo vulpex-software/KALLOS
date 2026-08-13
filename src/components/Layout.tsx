@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabaseClient'
 import { usePushNotifications } from '../hooks/usePushNotifications'
 import { fechaHoy } from '../lib/fechas'
 import { logoParaSalon, nombreParaSalon, esloganParaSalon } from '../lib/branding'
-import type { Cita } from '../types'
+import type { Cita, Profile } from '../types'
 
 interface GrupoLinks {
   titulo: string | null
@@ -143,8 +143,50 @@ function formatearFechaCorta(fecha: string) {
   return `${dia}/${mes}`
 }
 
+// Cumpleaños del personal que caen MAÑANA (mismo criterio de aviso
+// anticipado que el resto de la app usa para citas). Solo compara mes/día
+// -- el año de fecha_nacimiento no importa para esto.
+async function consultarCumpleañosMañana(): Promise<Profile[]> {
+  const { data } = await supabase
+    .from('profiles')
+    .select('*')
+    .in('rol', ['personal', 'admin', 'superadmin'])
+    .eq('activo', true)
+    .not('fecha_nacimiento', 'is', null)
+  const perfiles = (data as Profile[]) ?? []
+  const mañana = new Date()
+  mañana.setDate(mañana.getDate() + 1)
+  const mes = mañana.getMonth() + 1
+  const dia = mañana.getDate()
+  return perfiles.filter((p) => {
+    if (!p.fecha_nacimiento) return false
+    const [, mesStr, diaStr] = p.fecha_nacimiento.split('-')
+    return Number(mesStr) === mes && Number(diaStr) === dia
+  })
+}
+
+function useCumpleañosMañana(activo: boolean) {
+  const [cumpleañeros, setCumpleañeros] = useState<Profile[]>([])
+
+  useEffect(() => {
+    if (!activo) return
+    let cancelado = false
+    consultarCumpleañosMañana().then((datos) => {
+      if (!cancelado) setCumpleañeros(datos)
+    })
+    return () => {
+      cancelado = true
+    }
+    // No hace falta refrescar por intervalo: la fecha de nacimiento del
+    // personal no cambia durante el día.
+  }, [activo])
+
+  return cumpleañeros
+}
+
 interface CampanitaProps {
   citasPendientes: Cita[]
+  cumpleañosMañana: Profile[]
   onAbrirCita: (c: Cita) => void
   onMarcarVisto: (c: Cita) => void
 }
@@ -158,9 +200,10 @@ interface CampanitaProps {
 // tamaño de pantalla, pero ambas existen en el DOM), si compartieran una
 // sola ref el detector de "clic afuera" podía cerrar el panel por error al
 // tocar dentro de la copia que la ref no apuntaba, cancelando el clic real.
-function Campanita({ citasPendientes, onAbrirCita, onMarcarVisto }: CampanitaProps) {
+function Campanita({ citasPendientes, cumpleañosMañana, onAbrirCita, onMarcarVisto }: CampanitaProps) {
   const [abierto, setAbierto] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
+  const totalAvisos = citasPendientes.length + cumpleañosMañana.length
 
   useEffect(() => {
     if (!abierto) return
@@ -184,9 +227,9 @@ function Campanita({ citasPendientes, onAbrirCita, onMarcarVisto }: CampanitaPro
           <path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
           <path d="M13.73 21a2 2 0 0 1-3.46 0" />
         </svg>
-        {citasPendientes.length > 0 && (
+        {totalAvisos > 0 && (
           <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[10px] leading-none rounded-full min-w-[16px] h-4 px-1 flex items-center justify-center">
-            {citasPendientes.length > 9 ? '9+' : citasPendientes.length}
+            {totalAvisos > 9 ? '9+' : totalAvisos}
           </span>
         )}
       </button>
@@ -196,8 +239,14 @@ function Campanita({ citasPendientes, onAbrirCita, onMarcarVisto }: CampanitaPro
           <div className="p-3 border-b border-gray-100">
             <h3 className="text-sm font-semibold text-gray-700">🔔 Solicitudes y cambios por revisar</h3>
           </div>
+          {cumpleañosMañana.length > 0 && (
+            <div className="p-3 bg-brand-50 border-b border-gray-100">
+              <p className="text-xs font-semibold text-brand-700 mb-1">🎂 Cumpleaños mañana</p>
+              <p className="text-sm text-brand-800">{cumpleañosMañana.map((p) => p.nombre).join(', ')}</p>
+            </div>
+          )}
           {citasPendientes.length === 0 ? (
-            <p className="p-4 text-sm text-gray-400">No hay nada pendiente por revisar.</p>
+            <p className="p-4 text-sm text-gray-400">No hay citas pendientes por revisar.</p>
           ) : (
             <ul className="divide-y divide-gray-50">
               {citasPendientes.map((c) => (
@@ -288,8 +337,8 @@ function CampanitaPersonal({ citas, onIrARegistro }: { citas: Cita[]; onIrARegis
                   <p className="text-sm font-medium">
                     <span className="text-brand-600">{c.hora.slice(0, 5)}</span> · {c.cliente_nombre}
                   </p>
-                  {c.obsequio && (
-                    <p className="text-xs text-brand-700 bg-brand-50 rounded px-2 py-0.5">🎁 Obsequio: {c.obsequio}</p>
+                  {c.obsequios.length > 0 && (
+                    <p className="text-xs text-brand-700 bg-brand-50 rounded px-2 py-0.5">🎁 {c.obsequios.length > 1 ? 'Obsequios' : 'Obsequio'}: {c.obsequios.join(', ')}</p>
                   )}
                   {c.nota_interna && (
                     <p className="text-xs text-amber-700 bg-amber-50 rounded px-2 py-0.5">📌 {c.nota_interna}</p>
@@ -326,6 +375,7 @@ export default function Layout() {
   const puedeVerCitas = profile?.rol === 'admin' || profile?.rol === 'superadmin'
   const esPersonal = profile?.rol === 'personal'
   const { citas: citasPendientes, recargar } = useCitasPendientes(puedeVerCitas)
+  const cumpleañosMañana = useCumpleañosMañana(puedeVerCitas)
   const misCitasHoy = useMisCitasHoy(esPersonal ? profile?.id : undefined)
   // Manual de uso: la dueña ve todo el manual, los demás roles ven solo su sección.
   const manualHref = `/manual.html?rol=${profile?.rol ?? ''}`
@@ -420,7 +470,7 @@ export default function Layout() {
             <div className="flex items-center gap-1">
               <a href={manualHref} target="_blank" rel="noopener noreferrer" className="p-2 text-brand-300" aria-label="Ayuda: manual de uso">{iconoAyuda}</a>
               {puedeVerCitas && (
-                <Campanita citasPendientes={citasPendientes} onAbrirCita={abrirEnCitas} onMarcarVisto={marcarVisto} />
+                <Campanita citasPendientes={citasPendientes} cumpleañosMañana={cumpleañosMañana} onAbrirCita={abrirEnCitas} onMarcarVisto={marcarVisto} />
               )}
               {esPersonal && (
                 <CampanitaPersonal citas={misCitasHoy} onIrARegistro={irARegistro} />
@@ -471,7 +521,7 @@ export default function Layout() {
           <div className="px-3 py-2 border-t border-white/10 flex items-center gap-1">
             <a href={manualHref} target="_blank" rel="noopener noreferrer" className="p-2 text-panel-fg/70 hover:text-panel-fg" aria-label="Ayuda: manual de uso">{iconoAyuda}</a>
             {puedeVerCitas && (
-              <Campanita citasPendientes={citasPendientes} onAbrirCita={abrirEnCitas} onMarcarVisto={marcarVisto} />
+              <Campanita citasPendientes={citasPendientes} cumpleañosMañana={cumpleañosMañana} onAbrirCita={abrirEnCitas} onMarcarVisto={marcarVisto} />
             )}
             {esPersonal && (
               <CampanitaPersonal citas={misCitasHoy} onIrARegistro={irARegistro} />

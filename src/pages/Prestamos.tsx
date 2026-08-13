@@ -106,7 +106,10 @@ export default function Prestamos() {
       tipo: tipoActual,
       descripcion: descripcion || null,
       monto: esInsumoInterno ? 0 : Number(monto || 0),
-      metodo_pago: esInsumoInterno ? null : (metodoPago || null),
+      // El medio de pago solo aplica a préstamos de dinero -- un insumo
+      // fiado de vitrina genera deuda igual, pero el medio se registra
+      // cuando se paga esa deuda (prestamo_pagos), no al asignarlo.
+      metodo_pago: pestana === 'dinero' ? (metodoPago || null) : null,
       producto_id: pestana === 'insumos' && productoId ? productoId : null,
       cantidad: pestana === 'insumos' && productoId ? Number(cantidadProducto || 1) : null,
       // Un insumo asignado no es una deuda: no hay nada que "pagar" de vuelta.
@@ -284,7 +287,7 @@ export default function Prestamos() {
               <input type="text" inputMode="numeric" required value={formatearPesosInput(monto)} onChange={(e) => setMonto(soloDigitos(e.target.value))} className="w-full rounded-lg border border-gray-300 px-3 py-2" />
             </div>
           )}
-          {!esInsumoInterno && (
+          {pestana === 'dinero' && (
             <div>
               <label className="block text-sm font-medium mb-1">¿Por qué medio se dio?</label>
               <select value={metodoPago} onChange={(e) => setMetodoPago(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2">
@@ -296,6 +299,9 @@ export default function Prestamos() {
         </div>
         {esInsumoInterno && (
           <p className="text-xs text-gray-400 -mt-2">Un insumo asignado no tiene costo ni genera deuda — solo queda registrado a quién y qué se le dio.</p>
+        )}
+        {pestana === 'insumos' && !esInsumoInterno && (
+          <p className="text-xs text-gray-400 -mt-2">El medio de pago se pregunta cuando se registre el pago de esta deuda, no ahora.</p>
         )}
 
         {pestana === 'insumos' && (

@@ -30,6 +30,11 @@ const ETIQUETA_ESTADO: Record<EstadoCita, string> = {
 
 interface ClienteLite { id: string; nombre: string; telefono: string | null; cedula: string | null }
 
+// Agrega/quita un valor de una lista de selección múltiple (checkboxes de obsequios).
+function alternarEnLista(lista: string[], valor: string): string[] {
+  return lista.includes(valor) ? lista.filter((v) => v !== valor) : [...lista, valor]
+}
+
 export default function Citas() {
   const { profile, salon } = useAuth()
   const location = useLocation()
@@ -39,7 +44,7 @@ export default function Citas() {
   const [citas, setCitas] = useState<Cita[]>([])
   const [servicios, setServicios] = useState<Servicio[]>([])
   const [empleadas, setEmpleadas] = useState<Profile[]>([])
-  const [obsequios, setObsequios] = useState<Obsequio[]>([])
+  const [catalogoObsequios, setCatalogoObsequios] = useState<Obsequio[]>([])
 
   const [empleadaId, setEmpleadaId] = useState('')
   const [serviciosIds, setServiciosIds] = useState<string[]>([])
@@ -64,7 +69,7 @@ export default function Citas() {
   const [abono, setAbono] = useState('')
   const [abonoMetodo, setAbonoMetodo] = useState('')
   const [abonoFoto, setAbonoFoto] = useState<File | null>(null)
-  const [obsequio, setObsequio] = useState('')
+  const [obsequiosElegidos, setObsequiosElegidos] = useState<string[]>([])
   const [notaInterna, setNotaInterna] = useState('')
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -78,7 +83,7 @@ export default function Citas() {
   const [modalFecha, setModalFecha] = useState('')
   const [modalHora, setModalHora] = useState('')
   const [modalHoraFin, setModalHoraFin] = useState('')
-  const [modalObsequio, setModalObsequio] = useState('')
+  const [modalObsequios, setModalObsequios] = useState<string[]>([])
   const [modalNotaInterna, setModalNotaInterna] = useState('')
   const [confirmandoGuardando, setConfirmandoGuardando] = useState(false)
   const [modalError, setModalError] = useState<string | null>(null)
@@ -116,7 +121,7 @@ export default function Citas() {
     supabase.from('profiles').select('*').eq('rol', 'personal').eq('activo', true).order('nombre')
       .then(({ data }) => setEmpleadas(data ?? []))
     supabase.from('obsequios').select('*').eq('activo', true).order('nombre')
-      .then(({ data }) => setObsequios((data as Obsequio[]) ?? []))
+      .then(({ data }) => setCatalogoObsequios((data as Obsequio[]) ?? []))
   }, [])
 
   // Agenda agrupada por profesional (Cambio 1): en vez de por estado, para
@@ -307,7 +312,7 @@ export default function Citas() {
         abono: montoAbono,
         abono_metodo_pago: montoAbono > 0 && abonoMetodo ? abonoMetodo : null,
         abono_foto_url: abonoFotoPath,
-        obsequio: obsequio || null,
+        obsequios: obsequiosElegidos,
         nota_interna: notaInterna.trim() || null,
         adicional_concepto: servicioAdicional && lista.includes(servicioAdicional.id) ? adicionalConcepto.trim() : null,
         adicional_valor: servicioAdicional && lista.includes(servicioAdicional.id) ? Number(adicionalValor) : null,
@@ -364,7 +369,7 @@ export default function Citas() {
     setAbono('')
     setAbonoMetodo('')
     setAbonoFoto(null)
-    setObsequio('')
+    setObsequiosElegidos([])
     setNotaInterna('')
     if (citaCreada.fecha === fecha) cargarCitas()
   }
@@ -379,7 +384,7 @@ export default function Citas() {
     setModalFecha(cita.fecha)
     setModalHora(cita.hora.slice(0, 5))
     setModalHoraFin(cita.hora_fin ?? '')
-    setModalObsequio(cita.obsequio ?? '')
+    setModalObsequios(cita.obsequios ?? [])
     setModalNotaInterna(cita.nota_interna ?? '')
     setModalError(null)
   }
@@ -408,7 +413,7 @@ export default function Citas() {
         fecha: modalFecha,
         hora: modalHora,
         hora_fin: modalHoraFin || null,
-        obsequio: modalObsequio || null,
+        obsequios: modalObsequios,
         nota_interna: modalNotaInterna.trim() || null,
       })
       .eq('id', confirmando.id)
@@ -463,7 +468,7 @@ export default function Citas() {
                 📌 {c.nota_interna}
               </p>
             )}
-            {c.obsequio && <p className="text-xs text-brand-600">Obsequio: {c.obsequio}</p>}
+            {c.obsequios.length > 0 && <p className="text-xs text-brand-600">{c.obsequios.length > 1 ? 'Obsequios' : 'Obsequio'}: {c.obsequios.join(', ')}</p>}
           </div>
           <div className="flex flex-col items-end gap-1">
             <span className={`text-xs px-2 py-1 rounded-full ${ESTADO_ESTILOS[c.estado]}`}>{c.estado}</span>
@@ -701,11 +706,26 @@ export default function Citas() {
         )}
 
         <div>
-          <label className="block text-sm font-medium mb-1">Obsequio (opcional, según disponibilidad)</label>
-          <select value={obsequio} onChange={(e) => setObsequio(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2">
-            <option value="">Sin obsequio</option>
-            {obsequios.map((o) => <option key={o.id} value={o.nombre}>{o.nombre}</option>)}
-          </select>
+          <label className="block text-sm font-medium mb-1">Obsequios (opcional, según disponibilidad)</label>
+          {catalogoObsequios.length === 0 ? (
+            <p className="text-xs text-gray-400">No hay obsequios activos en el catálogo (Servicios → Obsequios).</p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {catalogoObsequios.map((o) => {
+                const activo = obsequiosElegidos.includes(o.nombre)
+                return (
+                  <button
+                    key={o.id}
+                    type="button"
+                    onClick={() => setObsequiosElegidos((prev) => alternarEnLista(prev, o.nombre))}
+                    className={`text-xs px-2 py-1 rounded-full border ${activo ? 'bg-brand-100 border-brand-300 text-brand-700' : 'bg-white border-gray-200 text-gray-400'}`}
+                  >
+                    {activo ? '✓ ' : ''}{o.nombre}
+                  </button>
+                )
+              })}
+            </div>
+          )}
         </div>
 
         <div>
@@ -853,11 +873,26 @@ export default function Citas() {
             </div>
 
             <div>
-              <label className="block text-xs font-medium mb-1">Obsequio (según disponibilidad)</label>
-              <select value={modalObsequio} onChange={(e) => setModalObsequio(e.target.value)} className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm">
-                <option value="">Sin obsequio</option>
-                {obsequios.map((o) => <option key={o.id} value={o.nombre}>{o.nombre}</option>)}
-              </select>
+              <label className="block text-xs font-medium mb-1">Obsequios (según disponibilidad)</label>
+              {catalogoObsequios.length === 0 ? (
+                <p className="text-xs text-gray-400">No hay obsequios activos en el catálogo.</p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {catalogoObsequios.map((o) => {
+                    const activo = modalObsequios.includes(o.nombre)
+                    return (
+                      <button
+                        key={o.id}
+                        type="button"
+                        onClick={() => setModalObsequios((prev) => alternarEnLista(prev, o.nombre))}
+                        className={`text-xs px-2 py-1 rounded-full border ${activo ? 'bg-brand-100 border-brand-300 text-brand-700' : 'bg-white border-gray-200 text-gray-400'}`}
+                      >
+                        {activo ? '✓ ' : ''}{o.nombre}
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
             </div>
 
             <div>
@@ -875,7 +910,7 @@ export default function Citas() {
               <label className="block text-xs font-medium mb-1">Mensaje que se enviará (revísalo antes de guardar)</label>
               <pre className="text-xs bg-gray-50 rounded-lg p-3 whitespace-pre-wrap border border-gray-200 max-h-48 overflow-y-auto">
                 {mensajeCita(
-                  { ...confirmando, fecha: modalFecha, hora: modalHora, obsequio: modalObsequio || null },
+                  { ...confirmando, fecha: modalFecha, hora: modalHora, obsequios: modalObsequios },
                   nombreServicios(confirmando),
                   salon?.nombre
                 )}
