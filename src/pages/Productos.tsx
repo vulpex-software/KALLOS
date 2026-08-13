@@ -14,6 +14,8 @@ export default function Productos() {
 
   const [nombre, setNombre] = useState('')
   const [descripcion, setDescripcion] = useState('')
+  const [marca, setMarca] = useState('')
+  const [proveedor, setProveedor] = useState('')
   const [precioVenta, setPrecioVenta] = useState('')
   const [costo, setCosto] = useState('')
   const [stock, setStock] = useState('0')
@@ -65,6 +67,8 @@ export default function Productos() {
       tipo: tab,
       nombre,
       descripcion: descripcion || null,
+      marca: tab === 'vitrina' ? (marca.trim() || null) : null,
+      proveedor: tab === 'vitrina' ? (proveedor.trim() || null) : null,
       precio_venta: tab === 'vitrina' ? Number(precioVenta || 0) : 0,
       costo: costo ? Number(costo) : null,
       stock: Number(stock || 0),
@@ -74,7 +78,7 @@ export default function Productos() {
       setError('No se pudo crear el producto: ' + error.message)
     } else {
       setMensaje('Producto agregado.')
-      setNombre(''); setDescripcion(''); setPrecioVenta(''); setCosto(''); setStock('0')
+      setNombre(''); setDescripcion(''); setMarca(''); setProveedor(''); setPrecioVenta(''); setCosto(''); setStock('0')
       cargar()
     }
   }
@@ -170,6 +174,18 @@ export default function Productos() {
           <label className="block text-sm font-medium mb-1">Descripción (opcional)</label>
           <input value={descripcion} onChange={(e) => setDescripcion(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2" />
         </div>
+        {tab === 'vitrina' && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium mb-1">Marca (opcional)</label>
+              <input value={marca} onChange={(e) => setMarca(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Proveedor (opcional)</label>
+              <input value={proveedor} onChange={(e) => setProveedor(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2" />
+            </div>
+          </div>
+        )}
         <div className={`grid grid-cols-1 ${tab === 'vitrina' ? 'sm:grid-cols-3' : 'sm:grid-cols-2'} gap-3`}>
           {tab === 'vitrina' && (
             <div>
@@ -211,6 +227,13 @@ export default function Productos() {
                   </button>
                 </div>
                 {p.descripcion && <p className="text-xs text-gray-400">{p.descripcion}</p>}
+                {(p.marca || p.proveedor) && (
+                  <p className="text-xs text-gray-400">
+                    {p.marca && <>Marca: {p.marca}</>}
+                    {p.marca && p.proveedor && ' · '}
+                    {p.proveedor && <>Proveedor: {p.proveedor}</>}
+                  </p>
+                )}
                 <div className="flex flex-wrap items-center gap-2">
                   {tab === 'vitrina' && (
                     <label className="text-xs text-gray-500">Precio

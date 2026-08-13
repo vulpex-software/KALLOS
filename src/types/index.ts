@@ -286,6 +286,8 @@ export interface Producto {
   tipo: TipoProducto
   nombre: string
   descripcion: string | null
+  marca: string | null
+  proveedor: string | null
   precio_venta: number
   costo: number | null
   stock: number

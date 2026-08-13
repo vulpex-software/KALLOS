@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { supabase, crearClienteEfimero } from '../lib/supabaseClient'
 import { useAuth } from '../contexts/AuthContext'
 import { normalizarCorreoOUsuario } from '../lib/authDominio'
+import { crearClienta } from '../lib/crearClienta'
 import { ESPECIALIDADES, type Especialidad, type Profile, type Rol } from '../types'
 
 const ROLES: { valor: Rol; etiqueta: string }[] = [
@@ -20,10 +21,12 @@ export default function Usuarios() {
   // --- Alta de usuario nuevo ---
   const [mostrarAlta, setMostrarAlta] = useState(false)
   const [nNombre, setNNombre] = useState('')
+  const [nApellidos, setNApellidos] = useState('')
   const [nUsuario, setNUsuario] = useState('')
   const [nPassword, setNPassword] = useState('')
   const [nTelefono, setNTelefono] = useState('')
   const [nRol, setNRol] = useState<Rol>('personal')
+  const esAltaCliente = nRol === 'cliente'
   const [creando, setCreando] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [mensaje, setMensaje] = useState<string | null>(null)
@@ -52,6 +55,33 @@ export default function Usuarios() {
     if (!profile?.salon_id) {
       setCreando(false)
       setError('No se pudo determinar tu salón. Vuelve a iniciar sesión e intenta de nuevo.')
+      return
+    }
+
+    // Las clientas se identifican por teléfono (usuario/contraseña = su
+    // número, editable después desde "Usuario / contraseña") -- ya no
+    // hace falta pedirle cédula ni un usuario/contraseña aparte al admin.
+    if (esAltaCliente) {
+      if (!nTelefono.trim()) {
+        setCreando(false)
+        setError('Escribe el teléfono de la clienta.')
+        return
+      }
+      const { id, error: errCliente } = await crearClienta({
+        salonId: profile.salon_id,
+        nombre: nNombre,
+        apellidos: nApellidos,
+        telefono: nTelefono,
+        preservarSesion: true
+      })
+      setCreando(false)
+      if (errCliente || !id) {
+        setError(errCliente || 'No se pudo crear la clienta.')
+        return
+      }
+      setMensaje(`Clienta "${nNombre}" creada. Ya puede iniciar sesión con su teléfono (${nTelefono.trim()}).`)
+      setNNombre(''); setNApellidos(''); setNTelefono(''); setNRol('personal')
+      cargar()
       return
     }
 
@@ -285,34 +315,52 @@ export default function Usuarios() {
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-1">Usuario o correo</label>
-            <input
-              required
-              autoCapitalize="none"
-              value={nUsuario}
-              onChange={(e) => setNUsuario(e.target.value)}
-              placeholder="ej: maria  (o maria@correo.com)"
-              className="w-full rounded-lg border border-gray-300 px-3 py-2"
-            />
-            <p className="text-xs text-gray-400 mt-1">
-              Si escribes solo un usuario (sin @), entrará escribiendo ese nombre. Si es una clienta con correo real, ponlo completo.
-            </p>
-          </div>
+          {esAltaCliente ? (
+            <>
+              <div>
+                <label className="block text-sm font-medium mb-1">Apellido</label>
+                <input required value={nApellidos} onChange={(e) => setNApellidos(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Teléfono</label>
+                <input required inputMode="tel" value={nTelefono} onChange={(e) => setNTelefono(e.target.value)} placeholder="3001234567" className="w-full rounded-lg border border-gray-300 px-3 py-2" />
+                <p className="text-xs text-gray-400 mt-1">
+                  Su usuario y contraseña quedan igual a su teléfono -- ella los puede cambiar después, o tú desde "Usuario / contraseña".
+                </p>
+              </div>
+            </>
+          ) : (
+            <>
+              <div>
+                <label className="block text-sm font-medium mb-1">Usuario o correo</label>
+                <input
+                  required
+                  autoCapitalize="none"
+                  value={nUsuario}
+                  onChange={(e) => setNUsuario(e.target.value)}
+                  placeholder="ej: maria  (o maria@correo.com)"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2"
+                />
+                <p className="text-xs text-gray-400 mt-1">
+                  Si escribes solo un usuario (sin @), entrará escribiendo ese nombre.
+                </p>
+              </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium mb-1">Contraseña</label>
-              <input type="text" required minLength={6} value={nPassword} onChange={(e) => setNPassword(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Teléfono (opcional)</label>
-              <input value={nTelefono} onChange={(e) => setNTelefono(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2" />
-            </div>
-          </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Contraseña</label>
+                  <input type="text" required minLength={6} value={nPassword} onChange={(e) => setNPassword(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Teléfono (opcional)</label>
+                  <input value={nTelefono} onChange={(e) => setNTelefono(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2" />
+                </div>
+              </div>
+            </>
+          )}
 
           <button type="submit" disabled={creando} className="w-full bg-brand-600 hover:bg-brand-700 disabled:opacity-60 text-white font-medium rounded-lg py-2 transition">
-            {creando ? 'Creando…' : 'Crear usuario'}
+            {creando ? 'Creando…' : esAltaCliente ? 'Crear clienta' : 'Crear usuario'}
           </button>
         </form>
       )}

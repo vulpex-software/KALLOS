@@ -62,6 +62,18 @@ export default function CierreCaja() {
   const [reembolsosHoy, setReembolsosHoy] = useState<CreditoCliente[]>([])
   const [cierresDelDia, setCierresDelDia] = useState<CierreConAdmin[]>([])
 
+  // Proveedores ya guardados en productos de vitrina, para sugerirlos como
+  // autocompletar en "Pago a proveedores" -- sigue aceptando texto libre,
+  // por si el pago no es de un producto (ej. servicio de aseo, arriendo).
+  const [proveedoresSugeridos, setProveedoresSugeridos] = useState<string[]>([])
+  useEffect(() => {
+    supabase.from('productos').select('proveedor').eq('tipo', 'vitrina').not('proveedor', 'is', null)
+      .then(({ data }) => {
+        const nombres = (data as { proveedor: string | null }[] ?? []).map((p) => p.proveedor).filter(Boolean) as string[]
+        setProveedoresSugeridos([...new Set(nombres)].sort())
+      })
+  }, [])
+
   // Prestado pendiente TOTAL (como la Base: siempre visible, sin importar la fecha)
   const [prestamosPendientes, setPrestamosPendientes] = useState<Prestamo[]>([])
   const [pagosPrestamoTodos, setPagosPrestamoTodos] = useState<PrestamoPago[]>([])
@@ -649,12 +661,18 @@ export default function CierreCaja() {
               </div>
             </div>
             {Number(proveedorMonto || 0) > 0 && (
-              <input
-                value={proveedorNota}
-                onChange={(e) => setProveedorNota(e.target.value)}
-                placeholder="¿A quién / por qué? (opcional)"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-              />
+              <>
+                <input
+                  list="proveedores-sugeridos"
+                  value={proveedorNota}
+                  onChange={(e) => setProveedorNota(e.target.value)}
+                  placeholder="¿A quién / por qué? (opcional)"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                />
+                <datalist id="proveedores-sugeridos">
+                  {proveedoresSugeridos.map((p) => <option key={p} value={p} />)}
+                </datalist>
+              </>
             )}
           </div>
 

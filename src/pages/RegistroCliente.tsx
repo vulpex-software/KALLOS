@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
-import { DOMINIO_INTERNO } from '../lib/authDominio'
+import { crearClienta } from '../lib/crearClienta'
 import { logoParaSalon } from '../lib/branding'
 import type { Salon } from '../types'
 
@@ -35,11 +35,24 @@ export default function RegistroCliente() {
   const [cargandoSalones, setCargandoSalones] = useState(false)
   const [busquedaSalon, setBusquedaSalon] = useState('')
   const [nombre, setNombre] = useState('')
-  const [cedula, setCedula] = useState('')
+  const [apellidos, setApellidos] = useState('')
   const [telefono, setTelefono] = useState('')
+  // Usuario y contraseña se autocompletan con el teléfono (fácil de
+  // recordar), pero se pueden cambiar -- una vez que la clienta toca el
+  // campo, dejan de seguir al teléfono.
+  const [usuario, setUsuario] = useState('')
+  const [usuarioTocado, setUsuarioTocado] = useState(false)
+  const [password, setPassword] = useState('')
+  const [passwordTocado, setPasswordTocado] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [listo, setListo] = useState<'sesion' | 'confirmar' | null>(null)
+
+  function cambiarTelefono(v: string) {
+    setTelefono(v)
+    if (!usuarioTocado) setUsuario(v)
+    if (!passwordTocado) setPassword(v)
+  }
 
   useEffect(() => {
     if (!salonSlug) {
@@ -89,30 +102,37 @@ export default function RegistroCliente() {
       return
     }
 
-    const ced = cedula.trim()
-    if (ced.length < 6) {
-      setError('La cédula debe tener al menos 6 dígitos.')
+    if (!telefono.trim()) {
+      setError('Escribe tu número de teléfono.')
+      return
+    }
+    if (password.trim().length < 6) {
+      setError('La contraseña debe tener al menos 6 caracteres.')
       return
     }
     setLoading(true)
-
-    // La cédula es el usuario Y la contraseña (fácil de recordar para las clientas).
-    const { data, error } = await supabase.auth.signUp({
-      email: `${ced}@${DOMINIO_INTERNO}`,
-      password: ced,
-      options: { data: { nombre, telefono, cedula: ced, salon_id: salon.id } }
+    const { id, error: errCrear } = await crearClienta({
+      salonId: salon.id,
+      nombre,
+      apellidos,
+      telefono,
+      usuario,
+      password
     })
     setLoading(false)
 
-    if (error) {
+    if (errCrear || !id) {
       setError(
-        error.message.toLowerCase().includes('registered') || error.message.toLowerCase().includes('already')
-          ? 'Esa cédula ya está registrada. Inicia sesión con tu cédula.'
-          : 'No se pudo crear la cuenta. Revisa los datos e intenta de nuevo.'
+        errCrear === 'Ese usuario ya está registrado.'
+          ? 'Ese usuario ya está registrado. Inicia sesión con tu usuario y contraseña.'
+          : errCrear || 'No se pudo crear la cuenta. Revisa los datos e intenta de nuevo.'
       )
       return
     }
-    setListo(data.session ? 'sesion' : 'confirmar')
+    // signUp() con el cliente normal ya deja la sesión activa en este navegador
+    // salvo que Supabase pida confirmar el correo (no aplica acá, es sintético).
+    const { data: sesionActual } = await supabase.auth.getSession()
+    setListo(sesionActual.session ? 'sesion' : 'confirmar')
   }
 
   if (buscandoSalon) {
@@ -177,7 +197,7 @@ export default function RegistroCliente() {
 
           <p className="text-center text-sm text-gray-500">
             ¿Ya tienes cuenta?{' '}
-            <button type="button" onClick={irALogin} className="text-brand-600 font-medium">Inicia sesión con tu cédula</button>
+            <button type="button" onClick={irALogin} className="text-brand-600 font-medium">Inicia sesión</button>
           </p>
           <p className="text-center text-[11px] text-gray-300">Developed by Vulpex Software SAS</p>
         </div>
@@ -190,7 +210,7 @@ export default function RegistroCliente() {
       <div className="min-h-screen flex items-center justify-center px-4">
         <div className="w-full max-w-sm bg-white rounded-2xl shadow p-6 text-center space-y-3">
           <p className="text-brand-700 font-semibold">¡Cuenta creada!</p>
-          <p className="text-sm text-gray-500">Ya puedes solicitar tu cita. Recuerda: tu usuario y contraseña son tu <b>cédula</b>.</p>
+          <p className="text-sm text-gray-500">Ya puedes solicitar tu cita. Recuerda tu usuario y contraseña para la próxima vez.</p>
           <Link to="/portal" className="inline-block bg-brand-600 text-white rounded-lg px-4 py-2 text-sm font-medium">Ir a mi portal</Link>
         </div>
       </div>
@@ -202,7 +222,7 @@ export default function RegistroCliente() {
       <div className="min-h-screen flex items-center justify-center px-4">
         <div className="w-full max-w-sm bg-white rounded-2xl shadow p-6 text-center space-y-3">
           <p className="text-brand-700 font-semibold">¡Cuenta creada!</p>
-          <p className="text-sm text-gray-500">Ya puedes iniciar sesión con tu <b>cédula</b> como usuario y como contraseña.</p>
+          <p className="text-sm text-gray-500">Ya puedes iniciar sesión con el usuario y la contraseña que elegiste.</p>
           <button onClick={irALogin} className="inline-block bg-brand-600 text-white rounded-lg px-4 py-2 text-sm font-medium">Iniciar sesión</button>
         </div>
       </div>
@@ -220,25 +240,48 @@ export default function RegistroCliente() {
 
         {error && <div className="text-sm bg-red-50 text-red-700 border border-red-200 rounded-lg p-2">{error}</div>}
 
-        <div>
-          <label className="block text-sm font-medium mb-1">Nombre completo</label>
-          <input required value={nombre} onChange={(e) => setNombre(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2" />
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">Cédula (NUIP / CC)</label>
-          <input
-            required
-            inputMode="numeric"
-            value={cedula}
-            onChange={(e) => setCedula(e.target.value)}
-            placeholder="Tu número de documento"
-            className="w-full rounded-lg border border-gray-300 px-3 py-2"
-          />
-          <p className="text-xs text-gray-400 mt-1">Con tu cédula ingresarás: es tu usuario y tu contraseña.</p>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-sm font-medium mb-1">Nombre</label>
+            <input required value={nombre} onChange={(e) => setNombre(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Apellido</label>
+            <input required value={apellidos} onChange={(e) => setApellidos(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2" />
+          </div>
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">Teléfono (WhatsApp)</label>
-          <input value={telefono} onChange={(e) => setTelefono(e.target.value)} placeholder="3001234567" className="w-full rounded-lg border border-gray-300 px-3 py-2" />
+          <input
+            required
+            inputMode="tel"
+            value={telefono}
+            onChange={(e) => cambiarTelefono(e.target.value)}
+            placeholder="3001234567"
+            className="w-full rounded-lg border border-gray-300 px-3 py-2"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">Usuario</label>
+          <input
+            required
+            autoCapitalize="none"
+            value={usuario}
+            onChange={(e) => { setUsuario(e.target.value); setUsuarioTocado(true) }}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2"
+          />
+          <p className="text-xs text-gray-400 mt-1">Se llena solo con tu teléfono, pero lo puedes cambiar.</p>
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">Contraseña</label>
+          <input
+            required
+            minLength={6}
+            value={password}
+            onChange={(e) => { setPassword(e.target.value); setPasswordTocado(true) }}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2"
+          />
+          <p className="text-xs text-gray-400 mt-1">También se llena con tu teléfono -- cámbiala si quieres una tuya (mínimo 6 caracteres).</p>
         </div>
 
         <button type="submit" disabled={loading} className="w-full bg-brand-600 hover:bg-brand-700 disabled:opacity-60 text-white font-medium rounded-lg py-2 transition">
@@ -247,7 +290,7 @@ export default function RegistroCliente() {
 
         <p className="text-center text-sm text-gray-500">
           ¿Ya tienes cuenta?{' '}
-          <button type="button" onClick={irALogin} className="text-brand-600 font-medium">Inicia sesión con tu cédula</button>
+          <button type="button" onClick={irALogin} className="text-brand-600 font-medium">Inicia sesión</button>
         </p>
         <p className="text-center text-[11px] text-gray-300">Developed by Vulpex Software SAS</p>
       </form>

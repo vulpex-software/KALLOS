@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { supabase, crearClienteEfimero } from '../lib/supabaseClient'
+import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../contexts/AuthContext'
 import { linkWhatsApp, mensajeCita } from '../lib/whatsapp'
 import { fechaHoy as hoy } from '../lib/fechas'
-import { DOMINIO_INTERNO } from '../lib/authDominio'
+import { crearClienta } from '../lib/crearClienta'
 import { formatearPesosInput, soloDigitos } from '../lib/pesos'
 import { comprimirImagen } from '../lib/comprimirImagen'
 import { METODOS_PAGO, type Cita, type CreditoCliente, type EstadoCita, type Obsequio, type Profile, type Servicio } from '../types'
@@ -28,7 +28,7 @@ const ETIQUETA_ESTADO: Record<EstadoCita, string> = {
   cancelada: 'Canceladas'
 }
 
-interface ClienteLite { id: string; nombre: string; telefono: string | null; cedula: string | null }
+interface ClienteLite { id: string; nombre: string; telefono: string | null }
 
 // Agrega/quita un valor de una lista de selección múltiple (checkboxes de obsequios).
 function alternarEnLista(lista: string[], valor: string): string[] {
@@ -53,12 +53,10 @@ export default function Citas() {
   // piden estos dos datos: qué es (ej. "Mariposa") y cuánto vale (ej. 15.000).
   const [adicionalConcepto, setAdicionalConcepto] = useState('')
   const [adicionalValor, setAdicionalValor] = useState('')
-  const [cedula, setCedula] = useState('')
   const [clienteId, setClienteId] = useState<string | null>(null)
   // Saldo a favor sin usar de la clienta seleccionada (ver Cuentas por cobrar).
   const [creditosDisponibles, setCreditosDisponibles] = useState<CreditoCliente[]>([])
-  const [buscando, setBuscando] = useState(false)
-  const [infoCedula, setInfoCedula] = useState<string | null>(null)
+  const [infoCliente, setInfoCliente] = useState<string | null>(null)
   const [busqueda, setBusqueda] = useState('')
   const [resultados, setResultados] = useState<ClienteLite[]>([])
   const [clienteNombre, setClienteNombre] = useState('')
@@ -176,16 +174,16 @@ export default function Citas() {
     setServicioTemp('')
   }
 
-  // Búsqueda en vivo de clientas por nombre o cédula.
+  // Búsqueda en vivo de clientas por nombre o teléfono.
   useEffect(() => {
     const q = busqueda.trim()
     if (q.length < 2) { setResultados([]); return }
     const t = setTimeout(async () => {
       const { data } = await supabase
         .from('profiles')
-        .select('id, nombre, telefono, cedula')
+        .select('id, nombre, telefono')
         .eq('rol', 'cliente')
-        .or(`nombre.ilike.%${q}%,cedula.ilike.%${q}%`)
+        .or(`nombre.ilike.%${q}%,telefono.ilike.%${q}%`)
         .order('nombre')
         .limit(8)
       setResultados((data as ClienteLite[]) ?? [])
@@ -197,8 +195,7 @@ export default function Citas() {
     setClienteId(r.id)
     setClienteNombre(r.nombre)
     setClienteTelefono(r.telefono ?? '')
-    setCedula(r.cedula ?? '')
-    setInfoCedula(`✓ Clienta seleccionada: ${r.nombre}`)
+    setInfoCliente(`✓ Clienta seleccionada: ${r.nombre}`)
     setBusqueda('')
     setResultados([])
     supabase
@@ -219,34 +216,6 @@ export default function Citas() {
       .update({ usado: true, usado_en_cita_id: cita.id })
       .in('id', creditosDisponibles.map((c) => c.id))
     setCreditosDisponibles([])
-  }
-
-  // Crea la clienta con su cédula (usuario y contraseña = cédula) y la enlaza.
-  async function crearClientePorCedula() {
-    const ced = cedula.trim()
-    if (ced.length < 6) { setInfoCedula('La cédula debe tener al menos 6 dígitos.'); return }
-    if (!clienteNombre.trim()) { setInfoCedula('Escribe el nombre de la clienta.'); return }
-    if (!profile?.salon_id) { setInfoCedula('No se pudo determinar tu salón. Vuelve a iniciar sesión.'); return }
-    setBuscando(true); setInfoCedula(null)
-    const efimero = crearClienteEfimero()
-    const { data, error } = await efimero.auth.signUp({
-      email: `${ced}@${DOMINIO_INTERNO}`,
-      password: ced,
-      options: { data: { nombre: clienteNombre, telefono: clienteTelefono, cedula: ced, salon_id: profile.salon_id } }
-    })
-    setBuscando(false)
-    if (error) {
-      setInfoCedula(
-        error.message.toLowerCase().includes('registered') || error.message.toLowerCase().includes('already')
-          ? 'Esa cédula ya tiene cuenta. Usa "Buscar" para traerla.'
-          : 'No se pudo crear la clienta: ' + error.message
-      )
-      return
-    }
-    if (data.user?.id) {
-      setClienteId(data.user.id)
-      setInfoCedula(`✓ Clienta creada: ${clienteNombre}. Entrará con su cédula.`)
-    }
   }
 
   async function crearCita(e: FormEvent) {
@@ -282,11 +251,32 @@ export default function Citas() {
 
     setGuardando(true)
 
+    // Clienta nueva (nombre + teléfono, sin cuenta ya enlazada): se crea su
+    // cuenta en el mismo paso, sin pedir cédula ni un botón aparte -- el
+    // teléfono queda como su usuario y contraseña. Sin teléfono no hay con
+    // qué loguearla, así que en ese caso solo queda como texto libre en la
+    // cita (igual que antes).
+    let clienteIdParaCita = clienteId
+    if (!clienteIdParaCita && clienteTelefono.trim() && profile.salon_id) {
+      const { id, error: errCliente } = await crearClienta({
+        salonId: profile.salon_id,
+        nombre: clienteNombre,
+        telefono: clienteTelefono,
+        preservarSesion: true
+      })
+      if (errCliente) {
+        setGuardando(false)
+        setError(`No se pudo crear la cuenta de la clienta: ${errCliente} Puedes buscarla arriba si ya tiene cuenta, o agendar sin cuenta quitando el teléfono.`)
+        return
+      }
+      clienteIdParaCita = id
+    }
+
     // Si hay abono, subir la foto del comprobante antes de crear la cita.
     let abonoFotoPath: string | null = null
     if (montoAbono > 0 && abonoFoto) {
       const comprimida = await comprimirImagen(abonoFoto)
-      const path = `${profile.salon_id}/abonos/${clienteId ?? profile.id}/${Date.now()}_${comprimida.name}`
+      const path = `${profile.salon_id}/abonos/${clienteIdParaCita ?? profile.id}/${Date.now()}_${comprimida.name}`
       const { error: upErr } = await supabase.storage.from('evidencias').upload(path, comprimida)
       if (upErr) {
         setGuardando(false)
@@ -303,7 +293,7 @@ export default function Citas() {
         empleada_id: empleadaId || null,
         servicio_id: lista[0],
         servicios_ids: lista,
-        cliente_id: clienteId,
+        cliente_id: clienteIdParaCita,
         cliente_nombre: clienteNombre,
         cliente_telefono: clienteTelefono || null,
         fecha: fechaCita,
@@ -357,9 +347,8 @@ export default function Citas() {
     setServicioTemp('')
     setAdicionalConcepto('')
     setAdicionalValor('')
-    setCedula('')
     setClienteId(null)
-    setInfoCedula(null)
+    setInfoCliente(null)
     setBusqueda('')
     setResultados([])
     setClienteNombre('')
@@ -618,11 +607,11 @@ export default function Citas() {
         <p className="text-xs text-gray-400 -mt-2">Horario de inicio de atención: {HORA_APERTURA} a {HORA_CIERRE} (el servicio puede terminar después si se extiende).</p>
 
         <div className="relative">
-          <label className="block text-sm font-medium mb-1">Buscar clienta (nombre o cédula)</label>
+          <label className="block text-sm font-medium mb-1">Buscar clienta (nombre o teléfono)</label>
           <input
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
-            placeholder="Escribe el nombre o la cédula…"
+            placeholder="Escribe el nombre o el teléfono…"
             className="w-full rounded-lg border border-gray-300 px-3 py-2"
           />
           {resultados.length > 0 && (
@@ -634,7 +623,7 @@ export default function Citas() {
                   onClick={() => seleccionarCliente(r)}
                   className="w-full text-left px-3 py-2 text-sm hover:bg-brand-50 border-b border-gray-50 last:border-0"
                 >
-                  {r.nombre} <span className="text-gray-400">· {r.cedula ?? 'sin cédula'}</span>
+                  {r.nombre} <span className="text-gray-400">· {r.telefono ?? 'sin teléfono'}</span>
                 </button>
               ))}
             </div>
@@ -647,23 +636,19 @@ export default function Citas() {
             <input required value={clienteNombre} onChange={(e) => { setClienteNombre(e.target.value); setClienteId(null); setCreditosDisponibles([]) }} className="w-full rounded-lg border border-gray-300 px-3 py-2" />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Cédula</label>
-            <input inputMode="numeric" value={cedula} onChange={(e) => { setCedula(e.target.value); setClienteId(null); setCreditosDisponibles([]) }} placeholder="Documento" className="w-full rounded-lg border border-gray-300 px-3 py-2" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Teléfono (para WhatsApp)</label>
-            <input value={clienteTelefono} onChange={(e) => setClienteTelefono(e.target.value)} placeholder="3001234567" className="w-full rounded-lg border border-gray-300 px-3 py-2" />
-          </div>
-          <div className="flex items-end">
-            {!clienteId && cedula.trim() && clienteNombre.trim() && (
-              <button type="button" onClick={crearClientePorCedula} disabled={buscando} className="w-full border border-brand-300 text-brand-700 rounded-lg py-2 text-sm font-medium disabled:opacity-40">
-                {buscando ? 'Creando…' : 'Crear clienta con esta cédula'}
-              </button>
-            )}
+            <label className="block text-sm font-medium mb-1">Teléfono (WhatsApp)</label>
+            <input value={clienteTelefono} onChange={(e) => { setClienteTelefono(e.target.value); if (!clienteId) setInfoCliente(null) }} placeholder="3001234567" className="w-full rounded-lg border border-gray-300 px-3 py-2" />
           </div>
         </div>
-        {infoCedula && (
-          <p className={`text-xs -mt-1 ${infoCedula.startsWith('✓') ? 'text-green-700' : 'text-amber-700'}`}>{infoCedula}</p>
+        {!clienteId && clienteNombre.trim() && (
+          <p className="text-xs text-gray-400 -mt-1">
+            {clienteTelefono.trim()
+              ? 'Como no la encontraste arriba, se le crea la cuenta sola al agendar (usuario y contraseña = su teléfono).'
+              : 'Sin teléfono no se le puede crear cuenta -- queda solo agendada, sin poder loguearse a ver su cita.'}
+          </p>
+        )}
+        {infoCliente && (
+          <p className="text-xs -mt-1 text-green-700">{infoCliente}</p>
         )}
 
         {creditosDisponibles.length > 0 && (

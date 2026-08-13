@@ -195,11 +195,12 @@ begin
     else 'superadmin'
   end;
 
-  insert into public.profiles (id, salon_id, nombre, telefono, cedula, rol)
+  insert into public.profiles (id, salon_id, nombre, apellidos, telefono, cedula, rol)
   values (
     new.id,
     v_salon_id,
     coalesce(nullif(new.raw_user_meta_data->>'nombre', ''), split_part(new.email, '@', 1)),
+    nullif(new.raw_user_meta_data->>'apellidos', ''),
     nullif(new.raw_user_meta_data->>'telefono', ''),
     nullif(new.raw_user_meta_data->>'cedula', ''),
     v_rol
@@ -288,6 +289,10 @@ create table public.productos (
   tipo text not null default 'vitrina' check (tipo in ('vitrina', 'interno')),
   nombre text not null,
   descripcion text,
+  -- Solo tienen sentido en vitrina -- un insumo interno no se compra a un
+  -- proveedor externo con marca propia de la misma forma (queda null ahí).
+  marca text,
+  proveedor text,
   precio_venta numeric(12,2) not null default 0 check (precio_venta >= 0),
   costo numeric(12,2) check (costo is null or costo >= 0),
   stock integer not null default 0 check (stock >= 0),
