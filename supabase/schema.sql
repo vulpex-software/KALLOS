@@ -695,6 +695,10 @@ create table public.cierres_caja (
   salon_id uuid not null references public.salones(id),
   fecha date not null,
   administradora_id uuid not null references public.profiles(id),
+  -- Dos cuadres independientes por día: 'servicios' (cobros, ventas de
+  -- vitrina, préstamos, reembolsos, proveedores) y 'abonos' (solo abonos de
+  -- citas). Mezclarlos en un solo número hacía imposible auditar un descuadre.
+  tipo text not null default 'servicios' check (tipo in ('servicios', 'abonos')),
   base numeric(12,2) not null default 0,
   efectivo_entregado numeric(12,2) not null default 0,
   nequi_reportado numeric(12,2) not null default 0,
@@ -707,7 +711,7 @@ create table public.cierres_caja (
   proveedor_nota text,
   observaciones text,
   created_at timestamptz not null default now(),
-  unique (salon_id, fecha, administradora_id)
+  unique (salon_id, fecha, administradora_id, tipo)
 );
 
 create index idx_cierres_caja_salon on public.cierres_caja(salon_id);

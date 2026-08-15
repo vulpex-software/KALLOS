@@ -230,11 +230,16 @@ export interface Cobro {
   created_at: string
 }
 
+// Cada día tiene dos cuadres independientes: el de servicios/productos y el
+// de abonos de citas. Cerrar uno no corta el otro.
+export type TipoCierreCaja = 'servicios' | 'abonos'
+
 export interface CierreCaja {
   id: string
   salon_id: string
   fecha: string
   administradora_id: string
+  tipo: TipoCierreCaja
   base: number
   efectivo_entregado: number
   nequi_reportado: number
