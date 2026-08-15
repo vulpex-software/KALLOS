@@ -431,6 +431,23 @@ proyecto nuevo, usa `supabase/crear_salon_superadmin.sql` o el patrón de
   agresivamente, verificar un cambio recién desplegado requiere limpiar
   registrations + caches del navegador antes de recargar
   (`navigator.serviceWorker.getRegistrations()` + `caches.keys()/delete()`).
+- **RLS no restringe columnas.** Una policy de UPDATE sobre `salones` para
+  el superadmin de un salón le da la fila ENTERA: puede cambiarse el `plan`
+  (y desbloquear el branding de Pro) o ponerse `activo = true` estando
+  suspendido, desde la consola del navegador con su propia sesión. Esa
+  policy existía (`"superadmin edita su propio salon"`, sin usarse en el
+  frontend) y se eliminó el 2026-08-15. **No la vuelvas a crear**: lo que un
+  salón edita de lo suyo va por RPCs `security definer` que tocan una sola
+  columna, como `actualizar_mensaje_importante(text)`. El único UPDATE que
+  queda sobre `salones` es el del operador.
+- **Service worker**: `vite.config.ts` usa `registerType: 'autoUpdate'` con
+  `strategies: 'injectManifest'`, y en esa combinación vite-plugin-pwa **no**
+  inyecta `skipWaiting`/`clientsClaim` — hay que tenerlos a mano en
+  `src/sw.ts` (están desde 2026-08-15). Sin ellos el SW nuevo se instala pero
+  queda "esperando" y el viejo sigue sirviendo el JS precacheado hasta cerrar
+  TODAS las pestañas: en la práctica las usuarias corrían código de días
+  contra una base ya migrada (síntoma real: "Could not find the 'obsequio'
+  column of 'citas'" al agendar). Si se toca el SW, no quitar esas dos líneas.
 - **Secretos**: `SUPABASE_SERVICE_ROLE_KEY` y `VAPID_PRIVATE_KEY` van
   *solo* como env vars server-side en Vercel — nunca con prefijo `VITE_`,
   nunca en el repo. Cualquier endpoint en `/api/*` que use la service-role
