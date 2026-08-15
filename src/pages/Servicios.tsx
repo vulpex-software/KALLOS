@@ -5,6 +5,10 @@ import { formatearPesosInput, soloDigitos } from '../lib/pesos'
 import { useAuth } from '../contexts/AuthContext'
 import type { Obsequio, Servicio } from '../types'
 
+// Valor centinela del <option> "Nueva categoría…". No puede chocar con una
+// categoría real porque ninguna se llama así.
+const NUEVA_CATEGORIA = '__nueva__'
+
 export default function Servicios() {
   const { profile } = useAuth()
   const [servicios, setServicios] = useState<Servicio[]>([])
@@ -13,10 +17,16 @@ export default function Servicios() {
 
   const [nombre, setNombre] = useState('')
   const [categoria, setCategoria] = useState<string>(CATEGORIAS_SERVICIOS[0])
+  // Última opción del selector: deja escribir una categoría que no está en
+  // la lista. La columna servicios.categoria es texto libre, así que no hace
+  // falta nada en la base de datos -- la categoría "existe" desde que hay un
+  // servicio guardado con ese nombre.
+  const [categoriaNueva, setCategoriaNueva] = useState('')
+  const esNuevaCategoria = categoria === NUEVA_CATEGORIA
   const [precioNuevo, setPrecioNuevo] = useState('')
   // Un combo suma el precio y la duración de los servicios que elijas del
   // catálogo -- no se desglosa después, queda como un servicio normal más.
-  const esCombo = categoria === 'Combo'
+  const esCombo = (esNuevaCategoria ? categoriaNueva.trim() : categoria) === 'Combo'
   const [comboServiciosIds, setComboServiciosIds] = useState<string[]>([])
   const [error, setError] = useState<string | null>(null)
   const [mensaje, setMensaje] = useState<string | null>(null)
@@ -86,6 +96,18 @@ export default function Servicios() {
     setComboServiciosIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
   }
 
+  // Las de siempre, más las que este salón haya creado por su cuenta (se
+  // descubren de los servicios ya guardados, incluidos los inactivos, para
+  // que una categoría no desaparezca del selector al desactivar su último
+  // servicio).
+  const categoriasDisponibles = useMemo(() => {
+    const fijas = [...CATEGORIAS_SERVICIOS] as string[]
+    const propias = [...new Set(servicios.map((s) => s.categoria))]
+      .filter((c) => !fijas.includes(c))
+      .sort((a, b) => a.localeCompare(b, 'es'))
+    return [...fijas, ...propias]
+  }, [servicios])
+
   const porCategoria = useMemo(() => {
     const mapa = new Map<string, Servicio[]>()
     for (const s of servicios) {
@@ -119,9 +141,20 @@ export default function Servicios() {
       setError('Elige al menos 2 servicios para armar el combo.')
       return
     }
+    let categoriaFinal = categoria
+    if (esNuevaCategoria) {
+      const escrita = categoriaNueva.trim()
+      if (!escrita) {
+        setError('Escribe el nombre de la categoría nueva.')
+        return
+      }
+      // Si ya existe escrita distinto (ej. "manicure" contra "Manicure"), se
+      // usa la que ya está para no partir el catálogo en dos grupos iguales.
+      categoriaFinal = categoriasDisponibles.find((c) => c.toLowerCase() === escrita.toLowerCase()) ?? escrita
+    }
     const { error } = await supabase.from('servicios').insert({
       salon_id: profile.salon_id,
-      categoria,
+      categoria: categoriaFinal,
       nombre,
       precio_base: esCombo ? comboTotales.precio : Number(precioNuevo || 0),
       ...(esCombo ? { duracion_minutos: comboTotales.duracion } : {})
@@ -133,7 +166,11 @@ export default function Servicios() {
       setNombre('')
       setPrecioNuevo('')
       setComboServiciosIds([])
-      cargar()
+      await cargar()
+      // Deja la categoría recién creada seleccionada, para poder cargarle
+      // varios servicios seguidos sin volver a escribirla.
+      setCategoria(categoriaFinal)
+      setCategoriaNueva('')
     }
   }
 
@@ -157,10 +194,26 @@ export default function Servicios() {
               onChange={(e) => { setCategoria(e.target.value); setComboServiciosIds([]) }}
               className="w-full rounded-lg border border-gray-300 px-3 py-2"
             >
-              {CATEGORIAS_SERVICIOS.map((c) => (
+              {categoriasDisponibles.map((c) => (
                 <option key={c} value={c}>{c}</option>
               ))}
+              <option value={NUEVA_CATEGORIA}>+ Nueva categoría…</option>
             </select>
+            {esNuevaCategoria && (
+              <>
+                <input
+                  autoFocus
+                  value={categoriaNueva}
+                  onChange={(e) => setCategoriaNueva(e.target.value)}
+                  placeholder="Nombre de la categoría nueva"
+                  maxLength={40}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 mt-2"
+                />
+                <p className="text-xs text-gray-400 mt-1">
+                  Queda creada al guardar el primer servicio, y aparece en la lista de arriba de ahí en adelante.
+                </p>
+              </>
+            )}
           </div>
           {!esCombo && (
             <div>
