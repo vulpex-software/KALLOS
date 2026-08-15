@@ -14,6 +14,9 @@ export interface Salon {
   color_secundario: string | null
   logo_url: string | null
   eslogan: string | null
+  // Bloque "Importante" del mensaje de WhatsApp de citas, propio de cada
+  // salón. En null se usa MENSAJE_IMPORTANTE_POR_DEFECTO (ver lib/whatsapp.ts).
+  mensaje_importante: string | null
   created_at: string
 }
 

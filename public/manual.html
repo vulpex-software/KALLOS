@@ -546,6 +546,7 @@
       <div class="page-head"><h3>Citas</h3> <code class="route">/citas</code> <span style="font-size:11px;color:var(--neutral);">— también la ve Admin</span></div>
       <p class="lede">Agendar citas internamente y administrar la agenda del día: confirmar, reprogramar, asignar profesional, cancelar o completar.</p>
       <div class="callout info">La agenda del día se puede ver de dos formas con el switch "Por estado" / "Por profesional": la primera es la vista de siempre (pendientes, confirmadas…); la segunda agrupa las mismas citas bajo el nombre de cada profesional (y "Sin asignar" al final) — útil para ver de un vistazo la carga de cada una.</div>
+      <div class="callout"><b>"Mensaje de WhatsApp del salón" <span style="color:var(--neutral);">(solo Super Admin)</span></b> — arriba de todo, plegable. Ahí la dueña escribe el bloque <b>«Importante»</b> que va al final de cada mensaje de cita: las reglas de su negocio (llegar puntual, venir sin acompañantes, lo que aplique). Es lo único del mensaje que se escribe a mano; el resto — servicio, fecha, hora, abono, obsequios y el nombre del salón — se arma solo con los datos de la cita. Si se deja vacío se usa el texto por defecto. Los *asteriscos* se ven como negrita en WhatsApp.</div>
       <div class="mock">
         <div class="mock-bar">/citas — tarjeta de una cita</div>
         <div class="mock-body">
@@ -591,10 +592,12 @@
           <tr><td>Fecha / Hora inicio / Hora término</td><td>Ajustables antes de confirmar o al reprogramar una cita ya confirmada.</td></tr>
           <tr><td>Obsequios</td><td>Se pueden definir o cambiar en este mismo paso (varios a la vez).</td></tr>
           <tr><td>📌 Nota interna (opcional)</td><td>Se puede escribir o cambiar en cualquier momento, sin importar el estado de la cita — a diferencia del resto de los datos, esta nota nunca se congela al confirmarse.</td></tr>
-          <tr><td>Vista previa del mensaje</td><td>Muestra exactamente el texto que se enviará por WhatsApp, ya actualizado con los cambios, antes de guardar.</td></tr>
-          <tr><td>"Confirmar y abrir WhatsApp" / "Guardar cambio y abrir WhatsApp"</td><td>Guarda los cambios y abre WhatsApp con el mensaje listo para enviar al número de la clienta.</td></tr>
+          <tr><td>"Enviar por WhatsApp al guardar"</td><td>Casilla marcada por defecto. Si la desmarcas, el cambio <b>solo se guarda</b> y no se abre WhatsApp — útil cuando la clienta está enfrente o ya le avisaste por otro lado. El link "WhatsApp" de la tarjeta de la cita sigue ahí para mandarlo después.</td></tr>
+          <tr><td>Vista previa del mensaje</td><td>Muestra exactamente el texto que se enviará, ya actualizado con los cambios, antes de guardar. Solo aparece si la casilla de arriba está marcada.</td></tr>
+          <tr><td>"Confirmar" / "Guardar cambio"</td><td>Guarda los cambios. Si la casilla está marcada, el botón dice "…y abrir WhatsApp" y abre el chat con el mensaje listo para el número de la clienta.</td></tr>
         </tbody>
       </table></div>
+      <div class="callout info"><b>Cada momento manda un mensaje distinto.</b> Antes los tres decían lo mismo ("Tu cita quedó agendada"), así que confirmar le mandaba a la clienta el mismo texto que cuando agendó, y reprogramar no avisaba que algo hubiera cambiado. Ahora: al agendar dice <b>"Tu cita quedó agendada"</b>; al confirmar, <b>"Tu cita está confirmada"</b> y cierra con "Te esperamos el … a las …"; y al reprogramar dice <b>"Tu cita cambió de fecha"</b> y muestra las dos fechas (<i>Antes: 12/08 a las 3pm → Ahora: 15/08 a las 11am</i>), que es lo único que de verdad importa de ese mensaje.</div>
       <div class="callout purple">Si una cita ya confirmada se reprograma, queda marcada con la etiqueta morada "Reprogramada" y aparece en la campanita de notificaciones hasta que alguien la marque como vista.</div>
       <div class="callout info">Al guardar una cita con profesional asignada, el sistema le manda un aviso push a su celular/navegador (si aceptó el permiso) con la hora, la clienta y la nota interna si escribiste una. También le queda en su propia campanita dentro de la app — ver <a href="#pe-registro">Personal → Registrar trabajo</a>.</div>
     </div>

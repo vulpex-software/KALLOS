@@ -48,6 +48,10 @@ create table public.salones (
   color_secundario text,
   logo_url text,
   eslogan text,
+  -- Bloque "Importante" del mensaje de WhatsApp de citas, propio de cada
+  -- salón (sin niños, puntualidad, lo que aplique a ese negocio). En null se
+  -- usa el texto por defecto que vive en src/lib/whatsapp.ts.
+  mensaje_importante text,
   created_at timestamptz not null default now()
 );
 
@@ -59,9 +63,13 @@ create policy "cualquiera lee salones activos"
   on public.salones for select
   using (activo = true);
 
--- La policy de UPDATE de salones (superadmin edita su propio salon) se crea
--- más abajo, después de definir es_super()/mi_salon() -- esas funciones
--- dependen de public.profiles, que todavía no existe en este punto.
+-- OJO: NO hay policy de UPDATE de salones para el superadmin del salón. Una
+-- policy no puede restringir columnas, así que darle update a su propia fila
+-- lo dejaría cambiarse el `plan` (desbloqueando el branding de Pro) o
+-- ponerse `activo = true` estando suspendido, desde la consola del
+-- navegador. Plan/activo/marca los cambia el operador desde la Consola; lo
+-- que el salón sí puede editar de lo suyo va por RPCs security definer que
+-- tocan una sola columna (ver actualizar_mensaje_importante más abajo).
 
 -- ---------------------------------------------------------
 -- 1. Perfiles (uno por usuario de auth.users)
@@ -130,11 +138,31 @@ as $$
   select public.mi_rol() = 'superadmin'
 $$;
 
--- Policy de salones diferida desde la sección 0 (necesitaba es_super()/mi_salon()).
-create policy "superadmin edita su propio salon"
-  on public.salones for update
-  using (public.es_super() and id = public.mi_salon())
-  with check (public.es_super() and id = public.mi_salon());
+-- Lo único de su propio salón que edita la dueña: el bloque "Importante" del
+-- mensaje de WhatsApp de citas. Va por RPC y no por una policy de update
+-- porque RLS no restringe columnas (ver la nota en la sección 0).
+create or replace function public.actualizar_mensaje_importante(p_texto text)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not public.es_super() then
+    raise exception 'Solo la dueña puede cambiar el mensaje del salón.';
+  end if;
+  if length(coalesce(p_texto, '')) > 2000 then
+    raise exception 'El mensaje es demasiado largo (máximo 2000 caracteres).';
+  end if;
+  -- Vacío se guarda como null a propósito: así vuelve al texto por defecto
+  -- en vez de dejar el bloque "Importante" en blanco.
+  update public.salones
+    set mensaje_importante = nullif(btrim(p_texto), '')
+    where id = public.mi_salon();
+end;
+$$;
+
+grant execute on function public.actualizar_mensaje_importante(text) to authenticated, service_role;
 
 -- Admin operativo = superadmin + admin (gestionan personal, horarios y citas).
 create or replace function public.es_admin()
