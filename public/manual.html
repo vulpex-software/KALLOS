@@ -401,7 +401,7 @@
           <tr><td>2. Se atiende</td><td>La profesional registra el trabajo en "Registrar trabajo" con foto del resultado — pero no cobra nada ahí.</td></tr>
           <tr><td>3. Queda por cobrar</td><td>El saldo (total del servicio menos el abono) aparece en "Cobros" para que el admin o la dueña lo cobre.</td></tr>
           <tr><td>4. Se cobra</td><td>El admin/dueña registra el pago en Cobros (uno o varios medios en el mismo cobro).</td></tr>
-          <tr><td>5. Se cuadra el día</td><td>Al cerrar, "Cierre de caja" resume cuánto entró por cada medio de pago.</td></tr>
+          <tr><td>5. Se cuadra el día</td><td>Al cerrar, "Cierre de caja" resume cuánto entró por cada medio de pago, en dos cuadres aparte: servicios y productos por un lado, abonos de citas por otro.</td></tr>
           <tr><td>6. Se paga a la profesional</td><td>Contabilidad/Reportes calcula el 50% de comisión sobre lo trabajado, descontando lo que deba de préstamos.</td></tr>
         </tbody>
       </table></div>
@@ -495,15 +495,16 @@
     <div class="page-block" id="sa-cierre" data-role="superadmin">
       <div class="page-head"><h3>Cierre de caja</h3> <code class="route">/cierre-caja</code> <span style="font-size:11px;color:var(--neutral);">— también la ve Admin</span></div>
       <p class="lede"><b>Admin</b> llena el formulario al final del día. <b>Super Admin</b> ve además el reporte de lo ya cerrado, con las diferencias por medio de pago ya calculadas — y también puede llenar su propio cierre (de hoy o de una fecha atrasada), por ejemplo si tomó la caja ella misma o para corregir uno mal hecho.</p>
-      <div class="callout info">El "día de caja" no siempre es el día calendario completo: si ya se cerró la caja de hoy, lo que se cobre/venda/preste después de ese cierre (aunque sea el mismo día) cuenta para el cierre de <b>mañana</b> — y si ayer se cerró temprano, hoy arranca justo en ese corte, no a medianoche. Cuando esto aplica, aparece un aviso arriba con las horas exactas del rango que cubre ese cierre.</div>
+      <div class="callout warn"><b>Ahora son DOS cuadres por día, no uno.</b> Arriba hay dos pestañas: <b>«Servicios y productos»</b> (cobros de Cuentas por cobrar + ventas de vitrina + préstamos + reembolsos + pago a proveedores, con base inicial) y <b>«Abonos»</b> (solo los abonos de citas, sin base ni proveedores). Cada una tiene su propio formulario de los 5 medios y se guarda por separado, así que <b>cada administradora guarda dos cierres al día</b>. Se separaron porque antes se sumaban en un solo número: cuando no cuadraba era imposible saber si el error estaba en lo cobrado por servicios o en lo recibido por abonos.</div>
+      <div class="callout info">El "día de caja" no siempre es el día calendario completo, y cada pestaña lleva <b>su propio corte</b> (cerrar «Servicios» no corta «Abonos» ni al revés): si ya se cerró ese cuadre hoy, lo que entre después cuenta para el cierre de <b>mañana</b>; y si ayer se cerró temprano y después siguió entrando plata, esa cola se arrastra a hoy. Cuando aplica, aparece el aviso con la hora exacta del corte. Los <b>trabajos</b> del día no se mueven con el corte — no son un movimiento de caja, siempre van por el día calendario.</div>
       <div class="mock-grid2" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;max-width:640px;">
         <div class="mock">
-          <div class="mock-bar">formulario — lo llenan ambos roles</div>
+          <div class="mock-bar">pestaña «Servicios y productos» — la llenan ambos roles</div>
           <div class="mock-body">
             <label class="mock-label">Base (efectivo inicial)</label>
             <div class="mock-input">$50.000</div>
             <div class="mock-row"><div><label class="mock-label">Efectivo</label><div class="mock-input">$120.000</div><div style="font-size:10.5px;color:var(--good);margin:-4px 0 6px;">esperado $120.000 · coincide ✓</div></div><div><label class="mock-label">Nequi</label><div class="mock-input">$75.000</div><div style="font-size:10.5px;color:var(--warn);margin:-4px 0 6px;">esperado $80.000 · escribiste $75.000 → faltan $5.000</div></div></div>
-            <a class="mock-btn full">Guardar cierre de caja</a>
+            <a class="mock-btn full">Guardar cierre de servicios</a>
           </div>
         </div>
         <div class="mock">
@@ -524,15 +525,18 @@
       <div class="table-wrap"><table class="field-table">
         <thead><tr><th>Campo</th><th>Para qué sirve</th></tr></thead>
         <tbody>
-          <tr><td>Base (efectivo inicial)</td><td>Con cuánto efectivo se abrió la caja ese día.</td></tr>
+          <tr><td>Pestañas «Servicios y productos» / «Abonos»</td><td>Los dos cuadres del día. El de servicios tiene base y pago a proveedores; el de abonos solo los 5 medios (no aplican ni base ni proveedores). Cada uno se guarda aparte y tiene su propio corte de día.</td></tr>
+          <tr><td>Base (efectivo inicial) <span style="color:var(--neutral);">(solo Servicios)</span></td><td>Con cuánto efectivo se abrió la caja ese día.</td></tr>
           <tr><td>Efectivo / Nequi / Daviplata / Datáfono / Bre-B</td><td>Lo que hay al cerrar en cada medio; Efectivo es obligatorio, los demás quedan en 0 si no aplican. Debajo de cada campo aparece en vivo cuánto se "esperaba" en ese medio y si lo escrito coincide, sobra o falta — para corregir antes de guardar.</td></tr>
           <tr><td>Pago a proveedores</td><td>Opcional: monto, medio de pago y nota de a quién/por qué se le pagó a un proveedor ese día (sale de la caja, y se descuenta del "esperado" de ese medio).</td></tr>
           <tr><td>Observaciones</td><td>Cualquier nota libre sobre el cierre.</td></tr>
-          <tr><td>Trabajos completados del día</td><td>Lista de referencia, no editable: todo lo que se registró como trabajo hecho ese día. Debajo, un resumen de cuánto de eso ya se cobró, cuánto sigue pendiente y cuánto se eliminó (condonó) — sin importar en qué día se cobró cada visita. Dentro de "Cobrado" se distingue además lo cobrado <b>hoy mismo</b> de lo cobrado/abonado <b>en otro día</b> (ej. un abono de una cita agendada hace una semana), con el detalle itemizado de cada caso — para que ese dinero no se confunda con lo esperado del día de hoy.</td></tr>
-          <tr><td>Cobrado del día por medio</td><td>Cuánto se cobró (Cobros + abonos de citas) en cada medio de pago ese día, sin importar de qué visita — es la base del "esperado".</td></tr>
+          <tr><td>Trabajos completados del día <span style="color:var(--neutral);">(solo Servicios)</span></td><td>Lista de referencia, no editable: todo lo que se registró como trabajo hecho ese día. Ojo: <b>el valor de los trabajos NO es la plata que entró hoy</b> (una clienta abona hoy y viene la otra semana; otra viene hoy habiendo abonado la semana pasada). Por eso debajo aparece un cuadre paso a paso que va restando lo que se cuadra en otro lado hasta llegar a una cifra que sí debe coincidir: valor de los trabajos − abono pagado <b>hoy</b> (se cuadra en «Abonos» de hoy) − abono pagado <b>otro día</b> (se cuadró en «Abonos» de ESE día) − pendiente por cobrar − eliminado = <b>«Debe estar cobrado acá»</b>. Debajo queda el detalle itemizado (clienta y fecha) de lo que se movió en otro día.</td></tr>
+          <tr><td>Cobrado de servicios y productos <span style="color:var(--neutral);">(solo Servicios)</span></td><td>Cuánto entró en cada medio de pago ese día por <b>cobros</b> de Cuentas por cobrar más <b>ventas de vitrina</b> — se muestran en dos líneas separadas para poder auditar cada una, pero se suman para el esperado. Los abonos NO están acá, están en su pestaña. Debajo, la comprobación contra los trabajos del día: ✓ verde si coinciden, o la diferencia explicada (suele ser un saldo de una visita de otro día cobrado hoy).</td></tr>
+          <tr><td>Abonos de citas cobrados hoy <span style="color:var(--neutral);">(solo Abonos)</span></td><td>Los abonos que entraron ese día, por medio de pago y con la lista itemizada (clienta, medio y, si la cita es para otro día, cuál). El total sale de la lista completa, no de sumar los 5 medios: un abono guardado <b>sin medio de pago</b> aparece en su propia fila «Sin medio» en ámbar y sigue contando en el total — antes desaparecía en silencio y dejaba un descuadre imposible de rastrear. Cuando aparezca esa fila, hay que corregir esas citas para poder cuadrar medio por medio.</td></tr>
           <tr><td>Préstamos del día</td><td>Lo prestado hoy (sale de caja) y lo que devolvieron hoy (entra a caja), separado por medio de pago.</td></tr>
           <tr><td>"Prestado pendiente"</td><td>Aviso persistente (no depende de la fecha) con el total que aún deben las profesionales en préstamos/fiados.</td></tr>
-          <tr><td>Reporte del día <span style="color:var(--neutral);">(solo Super Admin)</span></td><td>Cada cierre guardado ese día, con Base/Entrado/Salido, y debajo la comparación por medio de pago sumando TODOS los cierres de la fecha contra lo cobrado — si hay más de un cierre guardado, un aviso lo indica.</td></tr>
+          <tr><td>Préstamos del día / Reembolsos <span style="color:var(--neutral);">(solo Servicios)</span></td><td>Movimientos que entran o salen de la caja de servicios. No tienen nada que ver con los abonos, por eso no aparecen en esa pestaña.</td></tr>
+          <tr><td>Reporte del día <span style="color:var(--neutral);">(solo Super Admin)</span></td><td>Cada pestaña tiene el suyo («Reporte del día — servicios» y «Reporte del día — abonos»): los cierres guardados de ese tipo, con Base/Entrado/Salido, y debajo la comparación por medio de pago sumando TODOS los cierres de esa fecha y ese tipo contra lo que se movió — si hay más de uno guardado, un aviso lo indica.</td></tr>
         </tbody>
       </table></div>
       <div class="callout warn">Un cierre <b>no se puede editar ni borrar</b> una vez guardado. Si hubo un error, se crea uno nuevo explicando el motivo en Observaciones — la dueña ve ambos.</div>
@@ -598,6 +602,7 @@
     <div class="page-block" id="sa-ventas" data-role="superadmin">
       <div class="page-head"><h3>Ventas</h3> <code class="route">/ventas</code> <span style="font-size:11px;color:var(--neutral);">— también la ve Admin</span></div>
       <p class="lede">Venta de productos de la vitrina (distinto del insumo fiado a una empleada, que va por Préstamos).</p>
+      <div class="callout info">Lo vendido en vitrina <b>sí cuenta para el cierre de caja</b>: aparece en la pestaña «Servicios y productos» en su propia línea («Ventas de productos (vitrina)») y se suma al esperado de cada medio de pago. Antes no se contaba, así que cada venta salía en el cuadre como dinero que "sobra".</div>
       <div class="table-wrap"><table class="field-table">
         <thead><tr><th>Campo</th><th>Para qué sirve</th></tr></thead>
         <tbody>
@@ -881,7 +886,7 @@
         <thead><tr><th>Pantalla</th><th>Diferencia frente a Super Admin</th></tr></thead>
         <tbody>
           <tr><td><a href="#sa-cobros">Cobros</a></td><td>Exactamente igual.</td></tr>
-          <tr><td><a href="#sa-cierre">Cierre de caja</a></td><td>El Admin llena el formulario de cierre; no ve el reporte agregado ni la comparación por medio de pago de todos los cierres del día — eso es solo de la dueña.</td></tr>
+          <tr><td><a href="#sa-cierre">Cierre de caja</a></td><td>El Admin llena los dos formularios de cierre (servicios y abonos); no ve el reporte agregado ni la comparación por medio de pago de todos los cierres del día — eso es solo de la dueña.</td></tr>
           <tr><td><a href="#sa-citas">Citas</a></td><td>Exactamente igual.</td></tr>
           <tr><td><a href="#sa-ventas">Ventas</a></td><td>Igual, salvo que el botón "Anular" una venta es exclusivo de Super Admin.</td></tr>
           <tr><td><a href="#sa-asistencia">Asistencia</a></td><td>Exactamente igual.</td></tr>
