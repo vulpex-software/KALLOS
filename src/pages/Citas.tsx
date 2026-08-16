@@ -277,13 +277,14 @@ export default function Citas() {
     setError(null)
 
     // Si hay profesional elegida, verificar que no tenga cruce en ese horario.
+    // Acá sí bloquea (a diferencia de asignar/reprogramar, que solo avisan):
+    // la cita todavía no existe, así que cambiar la hora antes de guardar no
+    // cuesta nada.
     if (empleadaId) {
-      const { data: libres } = await supabase.rpc('profesionales_disponibles', {
-        p_salon_id: profile?.salon_id, p_fecha: fechaCita, p_desde: hora, p_hasta: horaFin
-      })
-      const disponible = ((libres as { id: string }[]) ?? []).some((p) => p.id === empleadaId)
-      if (!disponible) {
-        setError('Esa profesional ya tiene una cita en ese horario. Elige otra hora u otra profesional (o déjala sin asignar).')
+      const cruces = await citasCruzadas(empleadaId, fechaCita, hora, horaFin || null)
+      if (cruces.length > 0) {
+        const nombre = empleadas.find((e) => e.id === empleadaId)?.nombre ?? 'Esa profesional'
+        setError(`${textoCruce(nombre, cruces)} Elige otra hora u otra profesional (o déjala sin asignar).`)
         return
       }
     }
@@ -433,6 +434,19 @@ export default function Citas() {
       return
     }
     const esReprogramacion = confirmando.estado !== 'pendiente'
+
+    // El otro hueco: al mover la fecha/hora de una cita YA asignada, nadie
+    // revisaba si la profesional quedaba encima de otra cita suya.
+    if (confirmando.empleada_id) {
+      const cruces = await citasCruzadas(
+        confirmando.empleada_id, modalFecha, modalHora, modalHoraFin || null, confirmando.id
+      )
+      if (cruces.length > 0) {
+        const nombre = confirmando.empleada?.nombre ?? 'La profesional asignada'
+        if (!confirm(`${textoCruce(nombre, cruces)}\n\n¿Guardar de todas formas?`)) return
+      }
+    }
+
     setConfirmandoGuardando(true)
     setModalError(null)
     const { data, error } = await supabase
@@ -467,13 +481,87 @@ export default function Citas() {
     cargarCitas()
   }
 
+  // Las horas vienen 'HH:MM' del formulario y 'HH:MM:SS' de la base; sin
+  // igualarlas, comparar '14:00' con '14:00:00' da resultados raros en los
+  // bordes (una cadena más corta ordena antes que su propio prefijo largo).
+  function hhmmss(t: string) {
+    return t.length === 5 ? `${t}:00` : t
+  }
+
+  // Citas de esa profesional que se cruzan con ese horario, sin contar la
+  // cita que se está editando. No se usa la RPC profesionales_disponibles
+  // porque al reprogramar la cita se cruzaría consigo misma, y porque acá
+  // hace falta saber CON QUIÉN se cruza para poder decirlo.
+  async function citasCruzadas(empleadaId: string, fecha: string, desde: string, hasta: string | null, excluirId?: string) {
+    let q = supabase
+      .from('citas')
+      .select('id, cliente_nombre, hora, hora_fin')
+      .eq('empleada_id', empleadaId)
+      .eq('fecha', fecha)
+      .neq('estado', 'cancelada')
+    if (excluirId) q = q.neq('id', excluirId)
+    const { data } = await q
+    const ini = hhmmss(desde)
+    const fin = hhmmss(hasta || desde)
+    return ((data as { id: string; cliente_nombre: string; hora: string; hora_fin: string | null }[]) ?? [])
+      .filter((c) => hhmmss(c.hora) < fin && hhmmss(c.hora_fin ?? c.hora) > ini)
+  }
+
+  function textoCruce(nombreProfesional: string, cruces: { cliente_nombre: string; hora: string; hora_fin: string | null }[]) {
+    const detalle = cruces
+      .map((c) => `${c.cliente_nombre || 'sin nombre'} de ${c.hora.slice(0, 5)}${c.hora_fin ? ` a ${c.hora_fin.slice(0, 5)}` : ''}`)
+      .join(', ')
+    return `${nombreProfesional} ya tiene ${detalle} a esa hora.`
+  }
+
+  // "Ya que estoy, hazme también las cejas": la clienta pide un servicio más
+  // días después de agendar. Antes el trigger congelaba servicios_ids al
+  // confirmar y tocaba cancelar y volver a agendar, perdiendo el abono ya
+  // registrado. El servicio nuevo se cobra al final, en Cuentas por cobrar;
+  // el abono no se toca.
+  const [agregandoServicioA, setAgregandoServicioA] = useState<string | null>(null)
+  const [servicioAAgregar, setServicioAAgregar] = useState('')
+  const [agregandoServicio, setAgregandoServicio] = useState(false)
+
+  async function agregarServicioACita(cita: Cita) {
+    if (!servicioAAgregar) return
+    setAgregandoServicio(true)
+    const actuales = cita.servicios_ids?.length > 0 ? cita.servicios_ids : [cita.servicio_id]
+    const { error } = await supabase
+      .from('citas')
+      .update({ servicios_ids: [...actuales, servicioAAgregar] })
+      .eq('id', cita.id)
+    setAgregandoServicio(false)
+    if (error) {
+      setError('No se pudo agregar el servicio: ' + error.message)
+      return
+    }
+    setAgregandoServicioA(null)
+    setServicioAAgregar('')
+    cargarCitas()
+  }
+
   async function marcarVisto(cita: Cita) {
     await supabase.from('citas').update({ reprogramada: false }).eq('id', cita.id)
     cargarCitas()
   }
 
+  // Este era el hueco por el que se colaban las citas cruzadas: el chequeo
+  // solo existía al crear la cita CON profesional. Si se agendaba sin
+  // asignar (lo normal) y se asignaba después desde este desplegable, no se
+  // revisaba nada -- así terminaron dos clientas a la misma hora con la
+  // misma profesional. Avisa y deja seguir solo si se confirma, porque a
+  // veces cruzar es a propósito (dos servicios que se alternan).
   async function asignarManicurista(cita: Cita, empId: string) {
-    if (!empId) return
+    if (!empId || empId === cita.empleada_id) return
+    const cruces = await citasCruzadas(empId, cita.fecha, cita.hora, cita.hora_fin, cita.id)
+    if (cruces.length > 0) {
+      const nombre = empleadas.find((e) => e.id === empId)?.nombre ?? 'Esa profesional'
+      if (!confirm(`${textoCruce(nombre, cruces)}\n\n¿Asignarla de todas formas?`)) {
+        cargarCitas()
+        return
+      }
+    }
     await supabase.from('citas').update({ empleada_id: empId }).eq('id', cita.id)
     cargarCitas()
   }
@@ -556,10 +644,49 @@ export default function Citas() {
               <button onClick={() => cambiarEstado(c, 'completada')} className="text-xs text-green-700 underline">Completar</button>
             )}
             {c.estado !== 'cancelada' && c.estado !== 'completada' && (
+              <button
+                onClick={() => { setAgregandoServicioA(agregandoServicioA === c.id ? null : c.id); setServicioAAgregar('') }}
+                className="text-xs text-brand-700 underline"
+              >
+                + Agregar servicio
+              </button>
+            )}
+            {c.estado !== 'cancelada' && c.estado !== 'completada' && (
               <button onClick={() => cambiarEstado(c, 'cancelada')} className="text-xs text-red-600 underline">Cancelar</button>
             )}
           </div>
         </div>
+
+        {agregandoServicioA === c.id && (
+          <div className="bg-brand-50 border border-brand-200 rounded-lg p-2 space-y-2">
+            <p className="text-xs text-brand-800">
+              Se suma a lo que ya tiene agendado. Se cobra al final, en «Cuentas por cobrar» — el abono ya pagado no se toca.
+            </p>
+            <div className="flex gap-2">
+              <select
+                value={servicioAAgregar}
+                onChange={(e) => setServicioAAgregar(e.target.value)}
+                className="flex-1 rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
+              >
+                <option value="">Selecciona un servicio</option>
+                {porCategoria.map(([categoria, lista]) => (
+                  <optgroup key={categoria} label={categoria}>
+                    {lista.map((s) => (
+                      <option key={s.id} value={s.id} disabled={(c.servicios_ids ?? []).includes(s.id)}>{s.nombre}</option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+              <button
+                onClick={() => agregarServicioACita(c)}
+                disabled={!servicioAAgregar || agregandoServicio}
+                className="px-3 rounded-lg bg-brand-600 hover:bg-brand-700 disabled:opacity-40 text-white text-sm font-medium"
+              >
+                {agregandoServicio ? '…' : 'Agregar'}
+              </button>
+            </div>
+          </div>
+        )}
       </li>
     )
   }

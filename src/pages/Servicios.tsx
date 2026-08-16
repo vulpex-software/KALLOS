@@ -127,6 +127,39 @@ export default function Servicios() {
     cargar()
   }
 
+  // Renombrar un servicio: se corrige una falta de ortografía o cambia cómo
+  // lo llaman en el salón, sin tener que crear uno nuevo y desactivar el
+  // viejo (que partiría el historial en dos). RLS ya lo permitía
+  // ("solo gestor administra servicios de su salon", for all), pero acá se
+  // deja solo para la dueña. El precio y el historial no se tocan.
+  const [renombrandoId, setRenombrandoId] = useState<string | null>(null)
+  const [nombreEditado, setNombreEditado] = useState('')
+  const [errorRenombrar, setErrorRenombrar] = useState<string | null>(null)
+
+  async function guardarNombre(s: Servicio) {
+    const limpio = nombreEditado.trim()
+    setErrorRenombrar(null)
+    if (!limpio) {
+      setErrorRenombrar('El nombre no puede quedar vacío.')
+      return
+    }
+    if (limpio === s.nombre) {
+      setRenombrandoId(null)
+      return
+    }
+    const { error } = await supabase.from('servicios').update({ nombre: limpio }).eq('id', s.id)
+    if (error) {
+      setErrorRenombrar(
+        error.message.toLowerCase().includes('duplicate')
+          ? `Ya hay un servicio llamado "${limpio}" en ${s.categoria}.`
+          : 'No se pudo cambiar el nombre: ' + error.message
+      )
+      return
+    }
+    setRenombrandoId(null)
+    cargar()
+  }
+
   async function alternarActivo(s: Servicio) {
     await supabase.from('servicios').update({ activo: !s.activo }).eq('id', s.id)
     cargar()
@@ -272,8 +305,47 @@ export default function Servicios() {
           <h2 className="font-semibold text-sm text-brand-700 mb-3">{cat}</h2>
           <ul className="divide-y divide-gray-100">
             {lista.map((s) => (
-              <li key={s.id} className="py-2 flex items-center gap-3">
-                <span className={`flex-1 text-sm ${s.activo ? '' : 'text-gray-400 line-through'}`}>{s.nombre}</span>
+              <li key={s.id} className="py-2 flex items-center gap-3 flex-wrap">
+                {renombrandoId === s.id ? (
+                  <input
+                    autoFocus
+                    value={nombreEditado}
+                    onChange={(e) => setNombreEditado(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') guardarNombre(s)
+                      if (e.key === 'Escape') { setRenombrandoId(null); setErrorRenombrar(null) }
+                    }}
+                    className="flex-1 min-w-[8rem] rounded-lg border border-brand-300 px-2 py-1 text-sm"
+                  />
+                ) : (
+                  <span className={`flex-1 text-sm ${s.activo ? '' : 'text-gray-400 line-through'}`}>{s.nombre}</span>
+                )}
+                {profile?.rol === 'superadmin' && (
+                  renombrandoId === s.id ? (
+                    <>
+                      <button onClick={() => guardarNombre(s)} className="text-xs px-2 py-1 rounded-lg bg-brand-600 text-white">
+                        Guardar nombre
+                      </button>
+                      <button
+                        onClick={() => { setRenombrandoId(null); setErrorRenombrar(null) }}
+                        className="text-xs px-2 py-1 rounded-lg border border-gray-300 text-gray-500"
+                      >
+                        Cancelar
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={() => { setRenombrandoId(s.id); setNombreEditado(s.nombre); setErrorRenombrar(null) }}
+                      title="Cambiar el nombre"
+                      className="text-xs px-2 py-1 rounded-lg text-gray-400 hover:text-brand-700"
+                    >
+                      ✏️
+                    </button>
+                  )
+                )}
+                {renombrandoId === s.id && errorRenombrar && (
+                  <p className="w-full text-xs text-red-600">{errorRenombrar}</p>
+                )}
                 <div className="flex items-center gap-1">
                   <span className="text-sm text-gray-400">$</span>
                   <input
