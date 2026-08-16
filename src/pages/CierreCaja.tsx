@@ -219,9 +219,14 @@ export default function CierreCaja() {
       .gte('created_at', desde)
       .lt('created_at', hasta)
       .then(({ data }) => setVentasHoy((data as VentaConPagos[]) ?? []))
+    // SOLO préstamos de dinero: un insumo fiado o asignado no saca plata del
+    // cajón (sale producto de la vitrina, y la deuda se cobra después). Antes
+    // se traían todos, y como el insumo no lleva medio de pago aparecía como
+    // una salida "sin medio" que inflaba el Salido y descuadraba el efectivo.
     supabase
       .from('prestamos')
       .select('*, persona:profiles!prestamos_persona_id_fkey(nombre)')
+      .eq('tipo', 'dinero')
       .gte('created_at', desde)
       .lt('created_at', hasta)
       .then(({ data }) => setPrestamosHoy((data as Prestamo[]) ?? []))

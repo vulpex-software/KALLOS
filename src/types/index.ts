@@ -166,6 +166,9 @@ export interface ComisionPago {
   salon_id: string
   persona_id: string
   monto: number
+  // Obligatorio para pagos nuevos; null solo en los registrados antes de
+  // que se exigiera (ver 20260815090000_medio_pago_obligatorio_salidas.sql).
+  metodo_pago: MetodoPago | null
   fecha_desde: string
   fecha_hasta: string
   ajuste: number

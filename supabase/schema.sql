@@ -742,6 +742,8 @@ create table public.cierres_caja (
   proveedor_nota text,
   observaciones text,
   created_at timestamptz not null default now(),
+  -- Si hubo pago a proveedores, tiene que decir por qué medio salió.
+  check (proveedor_monto = 0 or proveedor_metodo_pago is not null),
   unique (salon_id, fecha, administradora_id, tipo)
 );
 
@@ -870,6 +872,9 @@ create table public.prestamos (
   descripcion text,
   monto numeric(12,2) not null default 0,
   metodo_pago text check (metodo_pago is null or metodo_pago in ('efectivo', 'nequi', 'daviplata', 'datafono', 'bre_b')),
+  -- Un préstamo de DINERO sale de la caja y tiene que decir por dónde. Un
+  -- insumo fiado/asignado no mueve plata (es inventario), ahí queda null.
+  check (tipo <> 'dinero' or metodo_pago is not null),
   pagado boolean not null default false,
   -- Si el insumo fiado es un producto del inventario, se enlaza aquí y se
   -- descuenta el stock automáticamente (ver trigger más abajo).
@@ -1685,6 +1690,10 @@ create table public.comision_pagos (
   salon_id uuid not null references public.salones(id),
   persona_id uuid not null references public.profiles(id),
   monto numeric(12,2) not null check (monto > 0),
+  -- Pagar la comisión saca plata: sin el medio no se puede cuadrar el
+  -- efectivo. Not null en instalaciones nuevas; en las que ya existían se
+  -- exige solo para filas nuevas (constraint NOT VALID en la migración).
+  metodo_pago text not null check (metodo_pago in ('efectivo', 'nequi', 'daviplata', 'datafono', 'bre_b')),
   fecha_desde date not null,
   fecha_hasta date not null,
   ajuste numeric(12,2) not null default 0,

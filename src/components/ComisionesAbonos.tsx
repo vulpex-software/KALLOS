@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../contexts/AuthContext'
 import { fechaHoy as hoy, haceDias, rangoUTC } from '../lib/fechas'
 import { formatearPesosInput, soloDigitos } from '../lib/pesos'
-import type { Cita, ComisionPago, RegistroTrabajo } from '../types'
+import { METODOS_PAGO, type Cita, type ComisionPago, type RegistroTrabajo } from '../types'
 
 const PORCENTAJE_COMISION = 0.5 // a las especialistas se les paga el 50%
 
@@ -85,6 +85,10 @@ export default function ComisionesAbonos({ ocultarComisiones = false }: { oculta
   const [pagoRangoTotal, setPagoRangoTotal] = useState(0)
   const [pagoCalculando, setPagoCalculando] = useState(false)
   const [pagoAjusteSigno, setPagoAjusteSigno] = useState<'+' | '-'>('+')
+  // Pagar la comisión es una salida de plata: sin el medio, el cuadre del
+  // efectivo del día queda impreciso (no se sabe si salió del cajón o por
+  // transferencia). La base de datos también lo exige.
+  const [pagoMetodo, setPagoMetodo] = useState<string>('')
   const [pagoAjusteMonto, setPagoAjusteMonto] = useState('')
   const [pagoNota, setPagoNota] = useState('')
   const [guardandoPago, setGuardandoPago] = useState(false)
@@ -134,11 +138,13 @@ export default function ComisionesAbonos({ ocultarComisiones = false }: { oculta
     setPagoError(null)
     if (pagoTotal <= 0) { setPagoError('El total a pagar debe quedar por encima de $0.'); return }
     if (pagoTotal > pagoSaldoPersona + 0.01) { setPagoError(`No puede ser mayor al saldo pendiente (${pesos(pagoSaldoPersona)}).`); return }
+    if (!pagoMetodo) { setPagoError('Elige por qué medio se le paga.'); return }
     setGuardandoPago(true)
     const { error } = await supabase.from('comision_pagos').insert({
       salon_id: profile.salon_id,
       persona_id: pagandoId,
       monto: pagoTotal,
+      metodo_pago: pagoMetodo,
       fecha_desde: pagoDesde,
       fecha_hasta: pagoHasta,
       ajuste: pagoAjusteNum,
@@ -148,6 +154,7 @@ export default function ComisionesAbonos({ ocultarComisiones = false }: { oculta
     setGuardandoPago(false)
     if (error) { setPagoError('No se pudo registrar el pago: ' + error.message); return }
     setPagoMensaje(`Se registró el pago de ${pesos(pagoTotal)}.`)
+    setPagoMetodo('')
     setPagandoId(null)
     cargarHistorico()
   }
@@ -335,6 +342,18 @@ export default function ComisionesAbonos({ ocultarComisiones = false }: { oculta
                       placeholder="Nota (opcional, ej. bono por puntualidad)"
                       className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
                     />
+                    <div>
+                      <label className="block text-xs font-medium mb-1">¿Por qué medio se le paga?</label>
+                      <select
+                        value={pagoMetodo}
+                        onChange={(e) => setPagoMetodo(e.target.value)}
+                        required
+                        className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
+                      >
+                        <option value="">Selecciona…</option>
+                        {METODOS_PAGO.map((m) => <option key={m.valor} value={m.valor}>{m.etiqueta}</option>)}
+                      </select>
+                    </div>
                     <p className="text-sm font-semibold text-brand-700">Total a pagar: {pesos(pagoTotal)}</p>
                     <div className="flex gap-2">
                       <button

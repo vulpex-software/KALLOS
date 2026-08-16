@@ -96,6 +96,13 @@ export default function Prestamos() {
       setError(`Solo hay ${productoSel?.stock ?? 0} en stock de ese producto.`)
       return
     }
+    // Un préstamo de dinero sale de la caja: sin saber por qué medio salió,
+    // el cuadre del efectivo del día queda impreciso. La base de datos
+    // también lo exige ahora (prestamos_medio_obligatorio_si_dinero).
+    if (pestana === 'dinero' && !metodoPago) {
+      setError('Elige por qué medio se entregó el dinero.')
+      return
+    }
     if (esInsumoInterno && !productoId) {
       setError('Elige el producto interno que se le asignó.')
       return
