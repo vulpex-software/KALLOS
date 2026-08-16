@@ -322,7 +322,7 @@
         <div class="grp-label">Personal (profesional)</div>
         <a class="nav-link" href="#pe-jornada">Mi jornada</a>
         <a class="nav-link" href="#pe-registro">Registrar trabajo</a>
-        <a class="nav-link" href="#pe-comision">Mi comisión</a>
+        <a class="nav-link" href="#pe-dia">Mi día</a>
         <a class="nav-link" href="#pe-permisos">Permisos</a>
         <a class="nav-link" href="#pe-perfil">Mi perfil</a>
       </div>
@@ -529,6 +529,8 @@
           <tr><td>Base (efectivo inicial) <span style="color:var(--neutral);">(solo Servicios)</span></td><td>Con cuánto efectivo se abrió la caja ese día.</td></tr>
           <tr><td>Efectivo / Nequi / Daviplata / Datáfono / Bre-B</td><td>Lo que hay al cerrar en cada medio; Efectivo es obligatorio, los demás quedan en 0 si no aplican. Debajo de cada campo aparece en vivo cuánto se "esperaba" en ese medio y si lo escrito coincide, sobra o falta — para corregir antes de guardar.</td></tr>
           <tr><td>Pago a proveedores</td><td>Opcional: monto, medio de pago y nota de a quién/por qué se le pagó a un proveedor ese día (sale de la caja, y se descuenta del "esperado" de ese medio).</td></tr>
+          <tr><td>Gastos del día (caja menor)</td><td>Lo que se compra afuera en el día: una copia, unos vasos, un domicilio. <b>La foto de la factura es obligatoria</b> — sin ella no deja guardar (lo exige también la base de datos, no solo la pantalla). Cada gasto se descuenta del "esperado" del medio con que se pagó y suma al "Salido" del día. Es distinto del pago a proveedores de arriba, que es el proveedor de producto de vitrina y no pide soporte. Solo la dueña puede borrar un gasto mal registrado.</td></tr>
+          <tr><td>🔔 Falta consignar</td><td>Aviso automático con el efectivo que hay para llevar al banco: lo cobrado y abonado en efectivo, menos lo que salió en efectivo ese día. La <b>base no entra</b>, se queda para abrir mañana. Al registrar la consignación pide el monto, el banco (opcional) y el <b>comprobante, obligatorio</b>. Cuando lo consignado cubre el efectivo del día, el aviso se pone verde. Si se consigna de más, avisa que puede incluir efectivo de días anteriores.</td></tr>
           <tr><td>Observaciones</td><td>Cualquier nota libre sobre el cierre.</td></tr>
           <tr><td>Trabajos completados del día <span style="color:var(--neutral);">(solo Servicios)</span></td><td>Lista de referencia, no editable: todo lo que se registró como trabajo hecho ese día. Ojo: <b>el valor de los trabajos NO es la plata que entró hoy</b> (una clienta abona hoy y viene la otra semana; otra viene hoy habiendo abonado la semana pasada). Por eso debajo aparece un cuadre paso a paso que va restando lo que se cuadra en otro lado hasta llegar a una cifra que sí debe coincidir: valor de los trabajos − abono pagado <b>hoy</b> (se cuadra en «Abonos» de hoy) − abono pagado <b>otro día</b> (se cuadró en «Abonos» de ESE día) − pendiente por cobrar − eliminado = <b>«Debe estar cobrado acá»</b>. Debajo queda el detalle itemizado (clienta y fecha) de lo que se movió en otro día.</td></tr>
           <tr><td>Cobrado de servicios y productos <span style="color:var(--neutral);">(solo Servicios)</span></td><td>Cuánto entró en cada medio de pago ese día por <b>cobros</b> de Cuentas por cobrar más <b>ventas de vitrina</b> — se muestran en dos líneas separadas para poder auditar cada una, pero se suman para el esperado. Los abonos NO están acá, están en su pestaña. Debajo, la comprobación contra los trabajos del día: ✓ verde si coinciden, o la diferencia explicada (suele ser un saldo de una visita de otro día cobrado hoy).</td></tr>
@@ -996,29 +998,28 @@
       <div class="callout good">Al guardar, si venía de una cita con abono, el mensaje confirma cuánto queda de saldo — pero ese saldo lo cobrará la administradora, nunca la profesional.</div>
     </div>
 
-    <div class="page-block" id="pe-comision" data-role="personal">
-      <div class="page-head"><h3>Mi comisión</h3> <code class="route">/mi-comision</code></div>
-      <p class="lede">Autoconsulta de lo que ganó por su propio trabajo — la misma cuenta que hace la dueña en Contabilidad, pero solo con sus propios datos.</p>
-      <div class="callout info">Arriba de todo, si aplica, aparece el <b>saldo pendiente por pagarte</b> — el histórico completo (todo lo ganado desde siempre menos lo que la dueña ya te ha pagado), sin importar el período que elijas abajo.</div>
+    <div class="page-block" id="pe-dia" data-role="personal">
+      <div class="page-head"><h3>Mi día</h3> <code class="route">/mi-dia</code></div>
+      <p class="lede">Consulta de lo que la profesional trabajó en un día: los servicios que registró, a qué clienta y a qué hora, con el valor de cada uno.</p>
+      <div class="callout warn">Esta pantalla <b>antes se llamaba "Mi comisión"</b> y mostraba el 50%, el acumulado de 7 o 15 días y el saldo histórico pendiente por pagarle. Por decisión de la dueña eso ya no se muestra: la profesional ve únicamente su día. La comisión se sigue calculando y pagando desde <a href="#sa-contabilidad">Contabilidad</a>, que es solo de la dueña.</div>
       <div class="mock">
-        <div class="mock-bar">/mi-comision</div>
+        <div class="mock-bar">/mi-dia</div>
         <div class="mock-body">
-          <div class="mock-nav"><span class="active">Últimos 7 días</span><span>Últimos 15 días</span></div>
           <div class="mock-grid2" style="margin-top:8px;">
-            <div class="mock-stat"><div class="l">Facturado</div><div class="v">$420k</div></div>
-            <div class="mock-stat"><div class="l">Tu comisión (50%)</div><div class="v">$210k</div></div>
+            <div class="mock-stat"><div class="l">Servicios</div><div class="v">6</div></div>
+            <div class="mock-stat"><div class="l">Valor del día</div><div class="v">$420k</div></div>
           </div>
         </div>
       </div>
       <div class="table-wrap"><table class="field-table">
         <thead><tr><th>Campo</th><th>Para qué sirve</th></tr></thead>
         <tbody>
-          <tr><td>Últimos 7 días / Últimos 15 días</td><td>Cambia el período que se está mirando (piensa en la semana o quincena de pago).</td></tr>
-          <tr><td>Facturado / Tu comisión (50%)</td><td>Suma de lo trabajado en el período y el 50% que le corresponde.</td></tr>
-          <tr><td>Debes (préstamos) / Te queda</td><td>Solo aparece si tiene préstamos pendientes: descuenta lo que debe de la comisión y muestra el neto.</td></tr>
-          <tr><td>Tabla "Por día"</td><td>La misma comisión desglosada día por día, con la cantidad de servicios de cada uno y el acumulado al final.</td></tr>
+          <tr><td>Selector de fecha</td><td>Arriba a la derecha. Empieza en hoy; se puede mirar cualquier día anterior.</td></tr>
+          <tr><td>Servicios / Valor del día</td><td>Cuántos servicios registró ese día y cuánto suman.</td></tr>
+          <tr><td>"Lo que hiciste"</td><td>Cada servicio con su hora, la clienta y el valor cobrado. Si el servicio era un adicional, se ve también el concepto.</td></tr>
         </tbody>
       </table></div>
+      <div class="callout">El valor que se muestra es <b>el del servicio</b>, no lo que se le paga a ella. Cualquier duda sobre un pago se resuelve con la dueña.</div>
     </div>
 
     <div class="page-block" id="pe-permisos" data-role="personal">
@@ -1141,7 +1142,7 @@
             <tr><td>Servicios</td><td>✓</td><td>—</td><td>—</td><td>—</td></tr>
             <tr><td>Mi jornada</td><td>—</td><td>✓</td><td>✓</td><td>—</td></tr>
             <tr><td>Registrar trabajo</td><td>—</td><td>—</td><td>✓</td><td>—</td></tr>
-            <tr><td>Mi comisión</td><td>—</td><td>—</td><td>✓</td><td>—</td></tr>
+            <tr><td>Mi día</td><td>—</td><td>—</td><td>✓</td><td>—</td></tr>
             <tr><td>Mi perfil</td><td>—</td><td>—</td><td>✓</td><td>—</td></tr>
             <tr><td>Portal (solicitar cita)</td><td>—</td><td>—</td><td>—</td><td>✓</td></tr>
           </tbody>

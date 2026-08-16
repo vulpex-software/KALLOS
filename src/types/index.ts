@@ -412,3 +412,31 @@ export interface ComparacionDiaria {
   total_reportado: number
   diferencia: number
 }
+
+// Gasto de "caja menor": lo que se compra afuera en el día (una copia, unos
+// vasos, un domicilio). Distinto del pago a proveedores del cierre, que es
+// el proveedor de producto de vitrina. Acá la foto de la factura es
+// obligatoria, a nivel de base de datos.
+export interface Gasto {
+  id: string
+  salon_id: string
+  monto: number
+  metodo_pago: MetodoPago
+  concepto: string
+  foto_url: string
+  registrado_por: string
+  created_at: string
+}
+
+// Efectivo llevado al banco, con su comprobante. `fecha` es el día de caja
+// al que corresponde, no necesariamente el día en que se fue al banco.
+export interface Consignacion {
+  id: string
+  salon_id: string
+  monto: number
+  fecha: string
+  banco: string | null
+  foto_url: string
+  registrado_por: string
+  created_at: string
+}

@@ -336,10 +336,10 @@ export default function Servicios() {
                   ) : (
                     <button
                       onClick={() => { setRenombrandoId(s.id); setNombreEditado(s.nombre); setErrorRenombrar(null) }}
-                      title="Cambiar el nombre"
-                      className="text-xs px-2 py-1 rounded-lg text-gray-400 hover:text-brand-700"
+                      title="Cambiar el nombre de este servicio"
+                      className="text-xs px-2 py-1 rounded-lg border border-gray-200 text-gray-500 hover:text-brand-700 hover:border-brand-300 whitespace-nowrap"
                     >
-                      ✏️
+                      ✏️ Nombre
                     </button>
                   )
                 )}

@@ -43,7 +43,7 @@ export default function Contabilidad() {
   // "Salido" de Cierre de Caja -- a propósito, para no mezclarlo con el
   // cuadre diario de caja física.
   const [balanceEntradas, setBalanceEntradas] = useState({ cobros: 0, abonos: 0, ventas: 0, pagosPrestamo: 0 })
-  const [balanceSalidas, setBalanceSalidas] = useState({ proveedores: 0, prestado: 0, comision: 0, reembolsos: 0 })
+  const [balanceSalidas, setBalanceSalidas] = useState({ proveedores: 0, prestado: 0, comision: 0, reembolsos: 0, gastos: 0 })
   useEffect(() => {
     async function cargarBalance() {
       const [
@@ -54,7 +54,8 @@ export default function Contabilidad() {
         { data: proveedoresData },
         { data: prestadoData },
         { data: comisionData },
-        { data: reembolsosData }
+        { data: reembolsosData },
+        { data: gastosData }
       ] = await Promise.all([
         supabase.from('cobros').select('monto'),
         supabase.from('citas').select('abono').gt('abono', 0).neq('estado', 'cancelada'),
@@ -63,7 +64,8 @@ export default function Contabilidad() {
         supabase.from('cierres_caja').select('proveedor_monto'),
         supabase.from('prestamos').select('monto').eq('tipo', 'dinero'),
         supabase.from('comision_pagos').select('monto'),
-        supabase.from('creditos_clientes').select('monto').eq('resolucion', 'reembolso')
+        supabase.from('creditos_clientes').select('monto').eq('resolucion', 'reembolso'),
+        supabase.from('gastos').select('monto')
       ])
       const sum = (rows: unknown, campo: string) => ((rows as Record<string, number>[]) ?? []).reduce((s, r) => s + Number(r[campo]), 0)
       setBalanceEntradas({
@@ -76,14 +78,15 @@ export default function Contabilidad() {
         proveedores: sum(proveedoresData, 'proveedor_monto'),
         prestado: sum(prestadoData, 'monto'),
         comision: sum(comisionData, 'monto'),
-        reembolsos: sum(reembolsosData, 'monto')
+        reembolsos: sum(reembolsosData, 'monto'),
+        gastos: sum(gastosData, 'monto')
       })
     }
     cargarBalance()
   }, [])
 
   const totalEntradasBalance = balanceEntradas.cobros + balanceEntradas.abonos + balanceEntradas.ventas + balanceEntradas.pagosPrestamo
-  const totalSalidasBalance = balanceSalidas.proveedores + balanceSalidas.prestado + balanceSalidas.comision + balanceSalidas.reembolsos
+  const totalSalidasBalance = balanceSalidas.proveedores + balanceSalidas.prestado + balanceSalidas.comision + balanceSalidas.reembolsos + balanceSalidas.gastos
   const balanceGeneral = totalEntradasBalance - totalSalidasBalance
 
   useEffect(() => {
@@ -229,6 +232,7 @@ export default function Contabilidad() {
           <span>Ventas de vitrina</span><span className="text-right">{pesos(balanceEntradas.ventas)}</span>
           <span>Pagos de préstamos recibidos</span><span className="text-right">{pesos(balanceEntradas.pagosPrestamo)}</span>
           <span>Pago a proveedores</span><span className="text-right">-{pesos(balanceSalidas.proveedores)}</span>
+          <span>Gastos (caja menor)</span><span className="text-right">-{pesos(balanceSalidas.gastos)}</span>
           <span>Préstamos dados</span><span className="text-right">-{pesos(balanceSalidas.prestado)}</span>
           <span>Comisión pagada</span><span className="text-right">-{pesos(balanceSalidas.comision)}</span>
           <span>Reembolsos a clientas</span><span className="text-right">-{pesos(balanceSalidas.reembolsos)}</span>
