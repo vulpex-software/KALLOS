@@ -63,7 +63,7 @@ export default function Contabilidad() {
         supabase.from('prestamo_pagos').select('monto'),
         supabase.from('cierres_caja').select('proveedor_monto'),
         supabase.from('prestamos').select('monto').eq('tipo', 'dinero'),
-        supabase.from('comision_pagos').select('monto'),
+        supabase.from('comision_pagos').select('monto').eq('tipo', 'pago'),
         supabase.from('creditos_clientes').select('monto').eq('resolucion', 'reembolso'),
         supabase.from('gastos').select('monto')
       ])

@@ -89,6 +89,57 @@ export default function ComisionesAbonos({ ocultarComisiones = false }: { oculta
   // efectivo del día queda impreciso (no se sabe si salió del cajón o por
   // transferencia). La base de datos también lo exige.
   const [pagoMetodo, setPagoMetodo] = useState<string>('')
+
+  // Ajuste de saldo: baja el pendiente SIN registrar una salida de plata.
+  // Es para los saldos de apertura -- comisión que se pagó por fuera antes
+  // de que el salón entrara al sistema, o un saldo que quedó mal de arranque
+  // mientras se alinea con lo real. Ni anular el trabajo (borraría ingreso
+  // que sí ocurrió) ni registrar un pago (inventaría una salida de hoy y
+  // descuadraría la caja) sirven para eso.
+  const [ajustandoId, setAjustandoId] = useState<string | null>(null)
+  const [ajusteMonto, setAjusteMonto] = useState('')
+  const [ajusteMotivo, setAjusteMotivo] = useState('')
+  const [guardandoAjuste, setGuardandoAjuste] = useState(false)
+  const [ajusteError, setAjusteError] = useState<string | null>(null)
+
+  function abrirAjuste(personaId: string, pendiente: number) {
+    setAjustandoId(personaId)
+    setPagandoId(null)
+    setAjusteError(null)
+    // Pre-llenado con el saldo completo, que es el caso normal (dejarlo en
+    // cero). Si le habían pagado solo una parte por fuera, se baja el monto.
+    setAjusteMonto(String(Math.round(pendiente)))
+    setAjusteMotivo('')
+  }
+
+  async function confirmarAjuste(pendiente: number) {
+    if (!ajustandoId || !profile) return
+    setAjusteError(null)
+    const monto = Number(ajusteMonto || 0)
+    if (monto <= 0) { setAjusteError('El monto del ajuste debe ser mayor a $0.'); return }
+    if (monto > pendiente + 0.01) { setAjusteError(`No puede ser mayor al saldo pendiente (${pesos(pendiente)}).`); return }
+    if (!ajusteMotivo.trim()) { setAjusteError('Escribe por qué se ajusta este saldo.'); return }
+    setGuardandoAjuste(true)
+    const { error } = await supabase.from('comision_pagos').insert({
+      salon_id: profile.salon_id,
+      persona_id: ajustandoId,
+      tipo: 'ajuste',
+      monto,
+      // Un ajuste no mueve caja: sin medio de pago a propósito (la base de
+      // datos lo exige así, para que no se cuele como salida en los cuadres).
+      metodo_pago: null,
+      fecha_desde: hoy(),
+      fecha_hasta: hoy(),
+      ajuste: 0,
+      nota: ajusteMotivo.trim(),
+      pagado_por: profile.id
+    })
+    setGuardandoAjuste(false)
+    if (error) { setAjusteError('No se pudo guardar el ajuste: ' + error.message); return }
+    setPagoMensaje(`Se ajustó el saldo en ${pesos(monto)}.`)
+    setAjustandoId(null)
+    cargarHistorico()
+  }
   const [pagoAjusteMonto, setPagoAjusteMonto] = useState('')
   const [pagoNota, setPagoNota] = useState('')
   const [guardandoPago, setGuardandoPago] = useState(false)
@@ -143,6 +194,7 @@ export default function ComisionesAbonos({ ocultarComisiones = false }: { oculta
     const { error } = await supabase.from('comision_pagos').insert({
       salon_id: profile.salon_id,
       persona_id: pagandoId,
+      tipo: 'pago',
       monto: pagoTotal,
       metodo_pago: pagoMetodo,
       fecha_desde: pagoDesde,
@@ -260,10 +312,19 @@ export default function ComisionesAbonos({ ocultarComisiones = false }: { oculta
                   <span className="text-sm font-medium">{s.nombre}</span>
                   <div className="flex items-center gap-3 shrink-0">
                     <span className="text-sm font-semibold text-amber-700">{pesos(s.pendiente)}</span>
-                    {pagandoId !== s.id && (
-                      <button onClick={() => abrirPago(s.id)} className="text-xs bg-brand-600 hover:bg-brand-700 text-white font-medium rounded-lg px-3 py-1.5">
-                        Confirmar valor y pagar
-                      </button>
+                    {pagandoId !== s.id && ajustandoId !== s.id && (
+                      <>
+                        <button onClick={() => abrirPago(s.id)} className="text-xs bg-brand-600 hover:bg-brand-700 text-white font-medium rounded-lg px-3 py-1.5">
+                          Confirmar valor y pagar
+                        </button>
+                        <button
+                          onClick={() => abrirAjuste(s.id, s.pendiente)}
+                          title="Bajar el saldo sin registrar un pago (saldo de apertura, ya pagado por fuera)"
+                          className="text-xs border border-purple-300 text-purple-700 font-medium rounded-lg px-3 py-1.5"
+                        >
+                          Ajustar saldo
+                        </button>
+                      </>
                     )}
                   </div>
                 </div>
@@ -280,16 +341,66 @@ export default function ComisionesAbonos({ ocultarComisiones = false }: { oculta
                 {historialAbiertoId === s.id && (
                   <ul className="text-xs text-gray-500 space-y-1 pl-1">
                     {(pagosPorPersona.get(s.id) ?? []).map((p) => (
-                      <li key={p.id} className="flex items-center justify-between gap-2">
+                      <li key={p.id} className={`flex items-center justify-between gap-2 ${p.tipo === 'ajuste' ? 'text-purple-700' : ''}`}>
                         <span>
                           {new Date(p.created_at).toLocaleDateString('es-CO')} · {pesos(Number(p.monto))}
-                          {' '}(del {p.fecha_desde} al {p.fecha_hasta}{Number(p.ajuste) !== 0 ? `, ${Number(p.ajuste) > 0 ? '+' : ''}${pesos(Number(p.ajuste))} ajuste` : ''})
+                          {p.tipo === 'ajuste' ? (
+                            <> · <b>AJUSTE</b> (no movió plata)</>
+                          ) : (
+                            <>
+                              {' '}(del {p.fecha_desde} al {p.fecha_hasta}{Number(p.ajuste) !== 0 ? `, ${Number(p.ajuste) > 0 ? '+' : ''}${pesos(Number(p.ajuste))} ajuste` : ''})
+                              {p.metodo_pago ? ` · ${p.metodo_pago}` : ''}
+                            </>
+                          )}
                           {p.nota ? ` · ${p.nota}` : ''}
                         </span>
                         <button onClick={() => borrarPago(p)} className="text-red-500 shrink-0">Borrar</button>
                       </li>
                     ))}
                   </ul>
+                )}
+
+                {ajustandoId === s.id && (
+                  <div className="border border-purple-200 bg-purple-50/60 rounded-xl p-3 space-y-2">
+                    {ajusteError && <div className="text-xs bg-red-50 text-red-700 border border-red-200 rounded-lg p-2">{ajusteError}</div>}
+                    <p className="text-xs text-purple-800">
+                      Baja el saldo <b>sin registrar un pago</b>: no mueve plata ni entra a la contabilidad. Es para un
+                      saldo que ya se pagó por fuera antes de arrancar el sistema, o uno que quedó mal de arranque.
+                    </p>
+                    <div>
+                      <label className="block text-xs font-medium mb-1">Monto a descontar del saldo</label>
+                      <input
+                        type="text" inputMode="numeric"
+                        value={formatearPesosInput(ajusteMonto)}
+                        onChange={(e) => setAjusteMonto(soloDigitos(e.target.value))}
+                        className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
+                      />
+                      <p className="text-[11px] text-gray-500 mt-0.5">
+                        Viene con el saldo completo ({pesos(s.pendiente)}) para dejarlo en cero. Si solo le pagaron una
+                        parte por fuera, baja el monto.
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium mb-1">¿Por qué se ajusta? (obligatorio)</label>
+                      <input
+                        value={ajusteMotivo}
+                        onChange={(e) => setAjusteMotivo(e.target.value)}
+                        placeholder="Ej. ya se le había pagado antes de entrar al sistema"
+                        className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => confirmarAjuste(s.pendiente)}
+                        disabled={guardandoAjuste}
+                        className="flex-1 bg-purple-600 hover:bg-purple-700 disabled:opacity-60 text-white text-sm font-medium rounded-lg py-1.5"
+                      >
+                        {guardandoAjuste ? 'Guardando…' : 'Ajustar saldo'}
+                      </button>
+                      <button type="button" onClick={() => setAjustandoId(null)} className="px-3 text-sm text-gray-500">Cancelar</button>
+                    </div>
+                  </div>
                 )}
 
                 {pagandoId === s.id && (

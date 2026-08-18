@@ -665,7 +665,16 @@ create table public.cobros (
   salon_id uuid not null references public.salones(id),
   visita_id uuid not null,
   monto numeric(12,2) not null check (monto > 0),
-  metodo_pago text not null check (metodo_pago in ('efectivo', 'nequi', 'daviplata', 'datafono', 'bre_b')),
+  -- 'pago' = plata que de verdad se entregó. 'ajuste' = corrección del saldo
+  -- que NO mueve caja (saldo de apertura pagado por fuera antes de entrar al
+  -- sistema). Por eso un ajuste no lleva medio de pago: si lo llevara, se
+  -- colaría como salida en los cuadres y en el Balance general.
+  tipo text not null default 'pago' check (tipo in ('pago', 'ajuste')),
+  metodo_pago text check (metodo_pago is null or metodo_pago in ('efectivo', 'nequi', 'daviplata', 'datafono', 'bre_b')),
+  check (
+    (tipo = 'pago'   and metodo_pago is not null) or
+    (tipo = 'ajuste' and metodo_pago is null)
+  ),
   -- Foto del comprobante del pago (obligatoria en la app para pagos digitales).
   foto_url text,
   nota text,
@@ -1699,7 +1708,9 @@ create table public.comision_pagos (
   ajuste numeric(12,2) not null default 0,
   nota text,
   pagado_por uuid not null references public.profiles(id),
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  -- Un ajuste sin explicación es indistinguible de un error.
+  check (tipo <> 'ajuste' or (nota is not null and length(btrim(nota)) > 0))
 );
 
 create index idx_comision_pagos_salon on public.comision_pagos(salon_id);

@@ -161,10 +161,16 @@ export interface PrestamoPago {
 // referencia de qué período se calculó para llegar al monto -- el saldo
 // pendiente real sale de sumar TODO lo ganado histórico menos la suma de
 // estos pagos, no de "cerrar" ese rango puntual.
+// 'pago' = plata que de verdad se le entregó. 'ajuste' = corrección del
+// saldo que NO mueve caja: sobre todo saldos de apertura, comisión que se
+// pagó por fuera antes de que el salón entrara al sistema.
+export type TipoComisionPago = 'pago' | 'ajuste'
+
 export interface ComisionPago {
   id: string
   salon_id: string
   persona_id: string
+  tipo: TipoComisionPago
   monto: number
   // Obligatorio para pagos nuevos; null solo en los registrados antes de
   // que se exigiera (ver 20260815090000_medio_pago_obligatorio_salidas.sql).
